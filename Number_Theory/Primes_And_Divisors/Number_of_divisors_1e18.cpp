@@ -3,8 +3,8 @@
  *
  * 1. 🎯 WHAT PROBLEM DOES THIS SOLVE?
  * - Keywords: "Number of divisors of N", "N up to 10^18", "Count divisors without full factorization".
- * - Classic Scenarios: You are given a massive number N (up to 10^14 or 10^18) and you need to 
- *   find exactly how many divisors it has, but O(sqrt(N)) is too slow, and you can't build a Sieve 
+ * - Classic Scenarios: You are given a massive number N (up to 10^14 or 10^18) and you need to
+ *   find exactly how many divisors it has, but O(sqrt(N)) is too slow, and you can't build a Sieve
  *   because N is too large.
  * - The Magic: "Wheel Factorization". Instead of checking every number up to sqrt(N), we manually
  *   factor out the first 8 primes (2, 3, 5, 7, 11, 13, 17, 19). The product of these primes is ~9.6 million.
@@ -24,8 +24,8 @@
  *       Space: ~6 MB for the precomputed wheel.
  *
  * 3. ⚙️ HOW TO ADAPT IT (THE DIALS & SWITCHES)
- * - If Memory Limit is EXTREMELY tight (<10 MB), you can remove the `spokes` vector and calculate the 
- *   coprime numbers inside the `count` function loop like your original code, but only if Q=1. 
+ * - If Memory Limit is EXTREMELY tight (<10 MB), you can remove the `spokes` vector and calculate the
+ *   coprime numbers inside the `count` function loop like your original code, but only if Q=1.
  *   For Q > 1, the precomputed `spokes` vector is vastly superior.
  */
 
@@ -43,13 +43,13 @@ public:
     {
         primes = {2, 3, 5, 7, 11, 13, 17, 19};
         wheel_size = 1;
-        
+
         for (int p : primes)
         {
             wheel_size *= p;
         }
         // ? PRECOMPUTATION MAGIC: We find all valid "spokes" ONCE.
-        // There are exactly 1,658,880 such numbers. By saving them, we skip millions 
+        // There are exactly 1,658,880 such numbers. By saving them, we skip millions
         // of useless iterations in future queries.
         for (ll i = 1; i < wheel_size; i++)
         {
@@ -85,7 +85,7 @@ public:
         }
         // Step 2: The remaining part of 'n' is now completely coprime to our base primes.
         // We only check potential divisors using our precomputed wheel spokes.
-        ll all = 0; 
+        ll all = 0;
         for (ll spoke : spokes)
         {
             ll o = spoke;
@@ -97,14 +97,14 @@ public:
                     all += 2; // Found pair of divisors: `o` and `n/o`
                 }
             }
-            
+
             // Check perfect square
             if (o * o == n)
             {
                 all++;
             }
         }
-        // The total divisors of the original N is the product of the divisors 
+        // The total divisors of the original N is the product of the divisors
         // of the base-prime part and the divisors of the remaining coprime part.
         return ans * all;
     }
@@ -112,7 +112,8 @@ public:
 void solve()
 {
     int t;
-    if (!(cin >> t)) return;
+    if (!(cin >> t))
+        return;
     // Initialize OUTSIDE the query loop so the wheel is built only once!
     FastDivisorCounter fdc;
     while (t--)
