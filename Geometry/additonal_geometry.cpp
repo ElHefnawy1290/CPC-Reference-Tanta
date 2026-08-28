@@ -8,6 +8,16 @@ cos(C) = (a^2 + b^2 - c^2) / (2ab) cos(A) = (b^2 + c^2 - a^2) / (2bc) cos(B) = (
 C = cos^(-1) [(a^2 + b^2 - c^2) / (2ab)] A = cos^(-1) [(b^2 + c^2 - a^2) / (2bc)] B = cos^(-1) [(a^2 + c^2 - b^2) / (2ac)]
 
 
+   // if I am given a set of points how to sort counter clock wise around the origin
+
+// The arg() Function: This function automatically returns a mathematical value strictly within the
+// interval $(-\pi, \pi]$, which perfectly aligns with the required counter-clockwise sweep.
+    
+bool comp(pt &a, pt &b) { 
+    return arg(a) < arg(b); 
+}
+
+
 
 
 typedef long double ld;
