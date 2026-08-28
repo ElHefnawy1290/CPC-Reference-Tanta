@@ -67,6 +67,8 @@ vector<vector<int>> KMPAutomaton(string &s)
     return aut;
 }
 
+// compressed version of string ... number of repetitions
+
 /*
 // s = a^n  >> ans = n; if s = ababab   ans = 3
         int ans = 1;

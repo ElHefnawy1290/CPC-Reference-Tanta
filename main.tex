@@ -10740,7 +10740,55 @@ vector<ll> multiply(vector<ll> const &a, vector<ll> const &b)
 \subsection{Linear algebra}
 \subsubsection{Determinant(composite mod)}
 \begin{lstlisting}[language=C++]
+/**
+ *  DETERMINANT WITH COMPOSITE MODULO
+ *
+ * WHAT PROBLEM DOES THIS SOLVE?
+ * Standard matrix determinants require division (modular inverse). If the modulo
+ * is composite, the modular inverse might not exist. This algorithm bypasses
+ * division entirely by using Euclidean-like steps (similar to GCD) to eliminate
+ * row elements.
+ *
+ * Complexity: O(N^3 log M)
+ */
+long long det_composite(vector<vector<long long>> a, long long mod)
+{
+    int n = a.size();
+    long long det = 1;
 
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = i + 1; j < n; j++)
+        {
+            // Use Euclidean-like steps to eliminate a[j][i] without using fractions
+            while (a[j][i] != 0)
+            {
+                long long t = a[i][i] / a[j][i];
+
+                for (int k = i; k < n; k++)
+                {
+                    // Subtract a multiple of row j from row i
+                    a[i][k] = (a[i][k] - t * a[j][k]) % mod;
+
+                    // Swap row i and row j to keep the algorithm progressing
+                    swap(a[i][k], a[j][k]);
+                }
+                // Every time we swap two rows, the sign of the determinant flips
+                det = -det;
+            }
+        }
+
+        // If a diagonal element becomes 0, the matrix is singular (determinant is 0)
+        if (a[i][i] == 0)
+            return 0;
+
+        // Multiply the diagonal elements to build the final determinant
+        det = det * a[i][i] % mod;
+    }
+
+    // Ensure the final determinant is positive before returning
+    return (det % mod + mod) % mod;
+}
 \end{lstlisting}
 \subsubsection{Determinant(prime mod)}
 \begin{lstlisting}[language=C++]
@@ -12980,7 +13028,131 @@ bool linear_congruence(ll a, ll b, ll m, ll &x, ll &num_solutions)
 \end{lstlisting}
 \subsubsection{MULTIPLICATIVE ORDER CARMICHAEL'S LAMBDA}
 \begin{lstlisting}[language=C++]
+/**
+ *  MULTIPLICATIVE ORDER & CARMICHAEL'S LAMBDA
+ *
+ * WHAT DOES THIS DO?
+ * Finds the smallest integer k such that (a^k) % n == 1.
+ * Using Euler's Totient phi(n) is too slow to find the exact order because
+ * the order divides Carmichael's Lambda function, which divides phi(n).
+ *
+ * MATH BACKGROUND:
+ * lambda(p^k) = p^(k-1) * (p - 1)  [except for p=2, k>=3 where it's divided by 2]
+ * lambda(a * b) = lcm(lambda(a), lambda(b))
+ * The multiplicative order of 'a' modulo 'n' strictly divides lambda(n).
+ *
+ * Complexity: O(sqrt(N)) to factorize N.
+ */
 
+using ll = long long;
+
+ll gcd(ll a, ll b)
+{
+    while (b)
+    {
+        a %= b;
+        swap(a, b);
+    }
+    return a;
+}
+
+ll lcm(ll a, ll b)
+{
+    return (a / gcd(a, b)) * b;
+}
+
+// Modular exponentiation using __int128 to prevent overflow when multiplying two long longs
+ll power(ll base, ll exp, ll mod)
+{
+    ll res = 1;
+    base %= mod;
+    while (exp > 0)
+    {
+        if (exp % 2 == 1)
+            res = (ll)((unsigned __int128)res * base % mod);
+        base = (ll)((unsigned __int128)base * base % mod);
+        exp /= 2;
+    }
+    return res;
+}
+
+ll carmichael_lambda(ll n)
+{
+    ll lambda = 1;
+    ll temp = n;
+
+    // Step 1: Prime factorization of n
+    for (ll i = 2; i * i <= temp; i++)
+    {
+        if (temp % i == 0)
+        {
+            ll p_pow = 1;
+            while (temp % i == 0)
+            {
+                p_pow *= i;
+                temp /= i;
+            }
+
+            // term = phi(p^k) = p^k - p^(k-1)
+            ll term = p_pow - p_pow / i;
+
+            // Special case for Carmichael: if p = 2 and k >= 3, lambda is phi/2
+            if (i == 2 && p_pow >= 8)
+            {
+                term /= 2;
+            }
+            lambda = lcm(lambda, term);
+        }
+    }
+
+    // If there is a prime factor greater than sqrt(n)
+    if (temp > 1)
+    {
+        lambda = lcm(lambda, temp - 1);
+    }
+
+    return lambda;
+}
+
+ll multiplicative_order(ll a, ll n)
+{
+    // If a and n are not coprime, order doesn't exist
+    if (gcd(a, n) != 1)
+        return -1;
+
+    ll lambda = carmichael_lambda(n);
+    ll order = lambda;
+    ll temp_lambda = lambda;
+
+    // Step 2: Find the exact order by removing prime factors from lambda
+    // and checking if it still satisfies a^order % n == 1
+    for (ll i = 2; i * i <= temp_lambda; i++)
+    {
+        if (temp_lambda % i == 0)
+        {
+            while (temp_lambda % i == 0)
+            {
+                temp_lambda /= i;
+            }
+            // Try dividing the order by the prime factor 'i'
+            while (order % i == 0 && power(a, order / i, n) == 1)
+            {
+                order /= i;
+            }
+        }
+    }
+
+    // Check the remaining prime factor
+    if (temp_lambda > 1)
+    {
+        while (order % temp_lambda == 0 && power(a, order / temp_lambda, n) == 1)
+        {
+            order /= temp_lambda;
+        }
+    }
+
+    return order;
+}
 \end{lstlisting}
 \subsubsection{discrete sqrt}
 \begin{lstlisting}[language=C++]
@@ -13083,7 +13255,137 @@ ll tonelli_shanks(ll n, ll p)
 \subsection{Multiplicative functions}
 \subsubsection{Min 25 sieve}
 \begin{lstlisting}[language=C++]
+/**
+ *  MIN-25 SIEVE
+ *
+ * WHAT DOES THIS DO?
+ * Computes the prefix sums of a multiplicative function f(x) in sub-linear time.
+ * Specifically, it calculates sum(f(i)) for 1 <= i <= N in O(N^(3/4) / log N) or O(N^(1 - eps)).
+ *
+ * CONDITIONS FOR f(x):
+ * 1. f(p) must be a polynomial (e.g., f(p) = 1, f(p) = p, f(p) = p^2).
+ * 2. f(p^c) can be calculated quickly in O(1).
+ *
+ * This template computes the sum of primes and count of primes as the base layer,
+ * which is the starting point for 90% of Min-25 problems.
+ * Modify S(x, y) to match the f(p^c) of your specific problem.
+ */
 
+using ll = long long;
+
+struct Min25
+{
+    ll n, sq, m;
+    vector<int> primes;
+    vector<bool> is_prime;
+
+    // Arrays for the DP state
+    vector<ll> w;         // Stores the distinct values of floor(n / i)
+    vector<ll> g0;        // DP table for f(p) = 1 (Count of primes)
+    vector<ll> g1;        // DP table for f(p) = p (Sum of primes)
+    vector<int> id1, id2; // id1 for x <= sq, id2 for x > sq
+
+    // Constructor initializes the structures and runs the prime sieve up to sqrt(N)
+    Min25(ll _n) : n(_n)
+    {
+        sq = sqrt(n);
+        is_prime.assign(sq + 1, true);
+        is_prime[0] = is_prime[1] = false;
+
+        for (int p = 2; p <= sq; p++)
+        {
+            if (is_prime[p])
+            {
+                primes.push_back(p);
+                for (int i = p * p; i <= sq; i += p)
+                    is_prime[i] = false;
+            }
+        }
+
+        id1.assign(sq + 1, 0);
+        id2.assign(sq + 1, 0);
+        m = 0;
+
+        // Step 1: Initialize all distinct values of floor(n / i)
+        for (ll i = 1, j; i <= n; i = n / j + 1)
+        {
+            j = n / i;
+            w.push_back(j);
+
+            // Assign DP base cases: treating all numbers as if they were prime
+            // g0 = j - 1 (count of numbers from 2 to j)
+            // g1 = (j * (j + 1) / 2) - 1 (sum of numbers from 2 to j)
+            g0.push_back(j - 1);
+            g1.push_back(j * (j + 1) / 2 - 1);
+
+            if (j <= sq)
+                id1[j] = m;
+            else
+                id2[n / j] = m;
+            m++;
+        }
+
+        // Step 2: The DP over primes (Filtering out composites)
+        for (int p : primes)
+        {
+            ll p2 = 1LL * p * p;
+            for (int i = 0; i < m && w[i] >= p2; i++)
+            {
+                ll next_val = w[i] / p;
+                int id = (next_val <= sq) ? id1[next_val] : id2[n / next_val];
+
+                // Subtract the contribution of composite numbers that have 'p' as their smallest prime factor
+                // g(w[i]) = g(w[i]) - f(p) * (g(w[i] / p) - sum(f(p_j)) for j < current_prime)
+
+                // For g0: f(p) = 1
+                g0[i] -= 1LL * (g0[id] - g0[id1[p - 1]]);
+
+                // For g1: f(p) = p
+                g1[i] -= 1LL * p * (g1[id] - g1[id1[p - 1]]);
+            }
+        }
+    }
+
+    /**
+     * Step 3: Compute the actual sum of f(x)
+     * @param x: Current value (n / i)
+     * @param y: Index of the minimum prime factor we are considering
+     */
+    ll S(ll x, int y)
+    {
+        if (x <= 1 || primes[y] > x)
+            return 0;
+
+        int id = (x <= sq) ? id1[x] : id2[n / x];
+
+        // Initial value: sum of f(p) for all primes in the range (primes[y], x]
+        // Example for f(p) = p: ans = g1[id] - g1[id1[primes[y]]]
+        // MODIFICATION: Change this formula based on your f(p)
+        ll ans = (g1[id] - g1[id1[primes[y]]]);
+
+        // Add the contribution of composite numbers
+        for (int i = y; i < primes.size() && 1LL * primes[i] * primes[i] <= x; i++)
+        {
+            ll p = primes[i];
+            ll p_pow = p;
+            ll p_next = p * p;
+
+            for (int e = 1; p_next <= x; e++, p_pow = p_next, p_next *= p)
+            {
+                // ans += f(p^e) * S(x / p^e, i + 1) + f(p^(e+1))
+                // MODIFICATION: Change the f(p^e) multipliers here
+                ans += p_pow * S(x / p_pow, i + 1) + p_next;
+            }
+        }
+        return ans;
+    }
+
+    ll solve()
+    {
+        // Adding f(1) at the end, which is usually 1
+        return S(n, 0) + 1;
+    }
+};
 \end{lstlisting}
 \subsubsection{Power tower}
 \begin{lstlisting}[language=C++]
