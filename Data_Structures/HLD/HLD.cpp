@@ -1,3 +1,47 @@
+/**
+ * 🛠️ THE ULTIMATE CP TEMPLATE BLUEPRINT: HEAVY-LIGHT DECOMPOSITION (HLD)
+ *
+ * 1. 🎯 WHAT PROBLEM DOES THIS SOLVE?
+ * - Keywords: "Path queries on a tree", "Subtree queries with point updates", "O(log^2 N) tree path".
+ * - Classic Scenarios: You have a tree with values on the nodes. You need to answer $Q$ queries 
+ *   that either update a node's value OR ask for the maximum/sum on the simple path between $U$ and $V$. 
+ *   Standard DFS/BFS takes $O(N)$ per query, which gives TLE. 
+ * - The Magic: "Tree Flattening into 1D". HLD cuts the tree into a set of disjoint vertical paths 
+ *   ("heavy chains"). It then maps these chains into a 1D array so we can build a Segment Tree over it. 
+ *   The mathematical guarantee is beautiful: ANY path between two nodes in the tree will cross 
+ *   at most $O(\log N)$ heavy chains. Thus, a path query becomes just $O(\log N)$ segment tree queries!
+ *
+ * 2. 📦 HOW TO USE IT (THE BLACK BOX)
+ * - Initialization: Pass the number of nodes, the adjacency list (0-indexed or 1-indexed safely), 
+ *   and a 1-indexed vector of initial node values.
+ *       // Note: Define GRAPH as vector<vector<int>> beforehand
+ *       HLD hld(N, adj, initial_values);
+ *
+ * - Point Update: Change the value of node U to X.
+ *       hld.point_update(U, X);
+ *
+ * - Path Query: Get the maximum value on the path from U to V.
+ *       int max_val = hld.query_path(U, V);
+ *
+ * - Subtree Query: Get the maximum value in the entire subtree of U.
+ *       int sub_max = hld.query_subtree(U);
+ *
+ * - Complexity:
+ *       Time: Build $O(N)$, Updates $O(\log N)$, Subtree Queries $O(\log N)$, Path Queries $O(\log^2 N)$.
+ *       Space: $O(N)$ for the arrays and Segment Tree.
+ *
+ * 3. ⚙️ HOW TO ADAPT IT (THE DIALS & SWITCHES)
+ * - Sum/Min instead of Max? 
+ *   1. Change the identity value in the `Node` constructor (e.g., `-OO` to `0` for sum, or `OO` for min).
+ *   2. Change `max(lf.val, rt.val)` in `merge()` to `+` or `min`.
+ *   3. Inside `HLD::query_path`, change `int res{-OO};` and `res = max(...)` to match your operation.
+ * - Edges instead of Nodes?
+ *   If weights are on edges, push the edge weight down to the deeper node (the child). 
+ *   Then, in `query_path`, when querying the final segment between the LCA and the other node, 
+ *   you must EXCLUDE the LCA (because the LCA holds the weight of the edge above it, which is not on the path). 
+ *   Change `seg.get(tin[v], tin[u] + 1)` to `seg.get(tin[v] + 1, tin[u] + 1)`.
+ * - GRAPH Typedef: Ensure you have `typedef vector<vector<int>> GRAPH;` globally so the constructor compiles.
+ */
 struct Node
 {
     int val;
