@@ -108,4 +108,20 @@ struct AhoCorasick
         }
         return total;
     }
+    long long search_non_overlapping(const string &text)
+    {
+        long long total = 0;
+        int v = 0;
+        for (char ch : text)
+        {
+            v = t[v].next[ch - 'a'];
+
+            if (t[v].matches > 0)
+            {
+                total++;
+                v = 0;
+            }
+        }
+        return total;
+    }
 };
