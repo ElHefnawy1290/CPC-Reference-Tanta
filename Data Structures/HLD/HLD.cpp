@@ -1,0 +1,185 @@
+struct Node
+{
+    int val;
+
+    Node()
+    {
+        val = -OO;
+    }
+
+    Node(int val) : val(val)
+    {
+    }
+
+    void change(int x)
+    {
+        val = x;
+    }
+};
+
+struct segmentTree
+{
+    int sz;
+    vector<Node> seg;
+
+    segmentTree(int n)
+    {
+        sz = 1;
+        while (sz < n)
+            sz *= 2;
+        seg.assign(2 * sz, Node());
+    }
+
+    void init(vector<int> &arr, int node, int lx, int rx)
+    {
+        if (rx - lx == 1)
+        {
+            if (lx < int(arr.size()))
+                seg[node] = Node(arr[lx]);
+            return;
+        }
+        int mid = (lx + rx) / 2;
+        init(arr, 2 * node + 1, lx, mid);
+        init(arr, 2 * node + 2, mid, rx);
+        seg[node] = merge(seg[2 * node + 1], seg[2 * node + 2]);
+    }
+
+    void init(vector<int> &arr)
+    {
+        init(arr, 0, 0, sz);
+    }
+
+    Node merge(Node &lf, Node &rt)
+    {
+        Node ans = Node();
+        ans.val = max(lf.val, rt.val);
+        return ans;
+    }
+
+    void set(int idx, int val, int node, int lx, int rx)
+    {
+        if (rx - lx == 1)
+        {
+            seg[node].change(val);
+            return;
+        }
+        int mid = (lx + rx) / 2;
+        if (idx < mid)
+            set(idx, val, 2 * node + 1, lx, mid);
+        else
+            set(idx, val, 2 * node + 2, mid, rx);
+        seg[node] = merge(seg[2 * node + 1], seg[2 * node + 2]);
+    }
+
+    void set(int idx, int val)
+    {
+        set(idx, val, 0, 0, sz);
+    }
+
+    Node get(int l, int r, int node, int lx, int rx)
+    {
+        if (lx >= l && rx <= r)
+            return seg[node];
+        if (rx <= l || lx >= r)
+            return Node();
+        int mid = (lx + rx) / 2;
+        Node lf = get(l, r, 2 * node + 1, lx, mid);
+        Node ri = get(l, r, 2 * node + 2, mid, rx);
+        return merge(lf, ri);
+    }
+
+    int get(int l, int r)
+    {
+        return get(l, r, 0, 0, sz).val;
+    }
+};
+
+struct HLD
+{
+private:
+    vector<int> sz, par, dep, tin, tout, head;
+    vector<vector<int>> graph;
+    vector<int> a;
+    int timer{1};
+    segmentTree seg;
+
+public:
+    HLD(int n, GRAPH graph, vector<int> &v) : graph(std::move(graph)), seg(n + 1)
+    {
+        sz = vector<int>(n + 1), par = vector<int>(n + 1), dep = vector<int>(n + 1), tin = vector<int>(n + 1), tout = vector<int>(n + 1), head = vector<int>(n + 1), a = vector<int>(n + 1);
+        dfs1(1, 0);
+        head[1] = 1;
+        dfs2(1);
+        for (int i = 1; i <= n; i++)
+            a[tin[i]] = v[i];
+        seg.init(a);
+    }
+
+    void dfs1(int u, int p)
+    {
+        dep[u] = dep[p] + 1;
+        par[u] = p;
+        sz[u] = 1;
+        if (p != 0)
+            graph[u].erase(find(graph[u].begin(), graph[u].end(), p));
+        for (auto &x : graph[u])
+        {
+            dfs1(x, u);
+            sz[u] += sz[x];
+            if (sz[x] > sz[graph[u][0]])
+                swap(x, graph[u][0]);
+        }
+    }
+
+    void dfs2(int u)
+    {
+        tin[u] = timer++;
+        for (auto &x : graph[u])
+        {
+            head[x] = x == graph[u][0] ? head[u] : x;
+            dfs2(x);
+        }
+        tout[u] = timer;
+    }
+
+    int lca(int u, int v)
+    {
+        while (head[u] != head[v])
+        {
+            if (dep[head[u]] > dep[head[v]])
+                u = par[head[u]];
+            else
+                v = par[head[v]];
+        }
+        if (dep[u] < dep[v])
+            return u;
+        return v;
+    }
+
+    void point_update(int u, int val)
+    {
+        seg.set(tin[u], val);
+    }
+
+    int query_subtree(int u)
+    {
+        return seg.get(tin[u], tout[u]);
+    }
+
+    // now querying for maximum
+    int query_path(int u, int v)
+    {
+        int res{-OO}; // TO
+        while (head[u] != head[v])
+        {
+            if (dep[head[u]] < dep[head[v]])
+                swap(u, v);
+            res = max(res, seg.get(tin[head[u]], tin[u] + 1)); // TO
+            u = par[head[u]];
+        }
+        if (dep[u] < dep[v])
+            swap(u, v);
+        res = max(res, seg.get(tin[v], tin[u] + 1)); // TO
+        return res;
+    }
+};
