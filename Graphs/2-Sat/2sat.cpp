@@ -1,3 +1,45 @@
+/**
+ * 🛠️ THE ULTIMATE CP TEMPLATE BLUEPRINT: 2-SAT SOLVER (VIA KOSARAJU'S ALGORITHM & SCC)
+ *
+ * 1. 🎯 WHAT PROBLEM DOES THIS SOLVE?
+ * - Keywords: "2-SAT", "Boolean Satisfiability", "Either X or Y must happen", "Implication Graph".
+ * - Classic Scenarios: You have N boolean variables (True/False) and M constraints. 
+ *   Each constraint involves exactly two variables, usually in the form "At least one of X or Y must be true" 
+ *   or "If X is chosen, Y cannot be chosen".
+ * - The Magic: "The Implication Graph". We translate every logic clause (X OR Y) into two directed edges: 
+ *   (!X -> Y) and (!Y -> X). We treat each variable as TWO nodes: one for True (2*i) and one for False (2*i+1). 
+ *   Then we find the Strongly Connected Components (SCCs). 
+ *   - If a variable X and its negation !X end up in the SAME component, a valid assignment is IMPOSSIBLE.
+ *   - If possible, we greedily assign True to whichever version of the variable appears LATER in the 
+ *     topological sort. Because Kosaraju's algorithm builds SCCs in reverse topological order, 
+ *     `SCC_id[X] > SCC_id[!X]` mathematically guarantees a valid boolean assignment!
+ *
+ * 2. 📦 HOW TO USE IT (THE BLACK BOX)
+ * - Base State: Define `n` (variables) and `m` (clauses).
+ * - Add Constraints: For every clause (X OR Y), call `add_clause(X, val_X, Y, val_Y)`. 
+ *   (e.g., `add_clause(1, true, 2, false)` means "Variable 1 must be True OR Variable 2 must be False").
+ * - Execution: 
+ *       1. Call `SCC()` to build the components.
+ *       2. Loop over 1 to N: check if `SCC_id[2*i] == SCC_id[2*i+1]`. If yes -> IMPOSSIBLE.
+ *       3. Otherwise, `assignment[i] = (SCC_id[2*i] > SCC_id[2*i+1])`.
+ *
+ * - Complexity:
+ *       Time: O(N + M) — Lightning fast linear time DFS traversals.
+ *       Space: O(N + M) to store the implication graph and reverse graph.
+ *
+ * 3. ⚙️ HOW TO ADAPT IT (THE DIALS & SWITCHES)
+ * - ⚠️ CRITICAL ARRAY SIZE WARNING: Because every variable splits into 2 nodes (positive and negative), 
+ *   your graph MUST have space for `2 * N + 2` nodes! Make sure `cond_graph`, `graph`, and `vis` arrays 
+ *   are initialized to `2 * n + 2`, NOT just `n + 1`.
+ * - How to FORCE a variable to be True? 
+ *   Add a clause stating (X OR X): `add_clause(x, true, x, true)`.
+ * - How to handle XOR (Exactly one is True)?
+ *   (X ^ Y) means they must be different. This is equivalent to TWO OR-clauses: 
+ *   (X OR Y) AND (!X OR !Y). Call `add_clause` twice for these two conditions.
+ * - How to handle XNOR (Both True or Both False)?
+ *   (X == Y) means they must be the same. Equivalent to: (!X OR Y) AND (X OR !Y).
+ */
+
 const int N = 1e5 + 9;
 
 int SCC_id[N];
