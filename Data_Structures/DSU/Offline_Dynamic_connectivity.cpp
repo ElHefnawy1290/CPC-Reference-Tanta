@@ -1,3 +1,46 @@
+/**
+ * 🛠️ THE ULTIMATE CP TEMPLATE BLUEPRINT: DSU WITH ROLLBACKS & SEGMENT TREE OVER TIME
+ *
+ * 1. 🎯 WHAT PROBLEM DOES THIS SOLVE?
+ * - Keywords: "Add and remove edges", "Dynamic Connectivity", "Offline queries", "Bipartite over time".
+ * - Classic Scenarios: You have a graph and Q queries. Some queries ADD an edge, some REMOVE 
+ *   an existing edge, and some ask for the number of connected components. Standard DSU 
+ *   can only add edges, it CANNOT remove them!
+ * - The Magic: "Time Travel using Segment Tree". Since we read all queries offline, we know the 
+ *   exact "lifespan" of every edge (from time L when it was added, to time R when it was removed). 
+ *   We treat a Segment Tree as a timeline. We insert each edge into the segment tree over the 
+ *   range [L, R]. Then, we DFS through the segment tree. 
+ *   Going DOWN: We add the edges using a modified DSU. 
+ *   At the LEAVES: We are at a specific point in time! We answer the queries for that moment.
+ *   Going UP: We UNDO (rollback) the edges we added. Because we strictly use Union-by-Size 
+ *   (NO path compression), our DSU history is perfectly preserved and easily reversible!
+ *
+ * 2. 📦 HOW TO USE IT (THE BLACK BOX)
+ * - Initialization: Create the segment tree. 
+ *       segmentTree st(N); 
+ *
+ * - Add Edges: For every edge, find its active time range [L, R) and add it.
+ *       st.set(L, R, edge(u, v));
+ *
+ * - Execution: Call the main DFS function to traverse time and answer queries.
+ *       st.get();
+ *
+ * - Complexity:
+ *       Time: O(Q log Q log N) — Every edge is split into log Q segments, and each DSU operation takes log N.
+ *       Space: O(Q log Q) to store the edges in the segment tree nodes.
+ *
+ * 3. ⚙️ HOW TO ADAPT IT (THE DIALS & SWITCHES)
+ * - The `N` vs `Q` Trap: In this current template, `segmentTree(int n)` uses the same `n` for 
+ *   BOTH the number of nodes `d(n)` and the segment tree time span. Usually, Nodes (N) != Queries (Q). 
+ *   You should change the constructor to: `segmentTree(int max_time, int max_nodes) : d(max_nodes)`.
+ * - How to track L and R: Use a `map<pair<int,int>, int> active_edges`. When an edge is added at 
+ *   time `t1`, store it. When it's removed at time `t2`, call `st.set(t1, t2, edge)`. Don't forget 
+ *   to add the edges that are never removed until the end: `st.set(t1, Q, edge)`.
+ * - Answering Queries: Go to the `if (rx - lx == 1)` block inside `get(...)`. At this exact line, 
+ *   the DSU holds the exact state of the graph at time `lx`. You can print `d.get_forests()` 
+ *   or check `d.same_set(u, v)` based on what query was asked at time `lx`.
+ */
+
 class DSU
 {
 private:
