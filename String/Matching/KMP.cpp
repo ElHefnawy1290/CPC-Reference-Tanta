@@ -66,3 +66,13 @@ vector<vector<int>> KMPAutomaton(string &s)
     }
     return aut;
 }
+
+/*
+// s = a^n  >> ans = n; if s = ababab   ans = 3
+        int ans = 1;
+        if (n % (n-pi[n-1]) == 0) {
+            ans = n/(n-pi[n-1]);
+        }
+        cout <<ans <<'\n';
+
+*/
