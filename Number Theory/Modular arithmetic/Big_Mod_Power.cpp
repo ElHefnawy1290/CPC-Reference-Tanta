@@ -5,7 +5,7 @@ ll Big_Mod_Power(string n, ll m)
     for(ll i = 0; i < n.size(); i++)
     {
         x = ((x * 10)) + (n[i] - '0');
-        x %= m;  // كل مره بناخد باقي قسمه عشان نقلل الرقم
+        x %= m;   
     }
     return x;  /// return n % m
 }
