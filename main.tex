@@ -13,8 +13,9 @@
 \definecolor{codegreen}{rgb}{0,0.6,0}
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
 \definecolor{codepurple}{rgb}{0.58,0,0.82}
-\definecolor{backcolour}{rgb}{0.98,0.98,0.98}
+\definecolor{backcolour}{rgb}{0.96,0.96,0.96}
 \definecolor{linkcolor}{rgb}{0,0.3,0.6}
+\definecolor{keywordcolor}{rgb}{0.8,0.1,0.4}
 
 \hypersetup{
     colorlinks=true,
@@ -22,28 +23,41 @@
     filecolor=magenta,      
     urlcolor=blue,
     pdftitle={ECPC Reference Document},
-    pdfauthor={Amr Khaled Elhefnawy}
+    pdfauthor={Tarek Accepted 3shan Zh2t}
 }
 
 \lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\itshape\color{codegreen},
+    keywordstyle=\bfseries\color{keywordcolor},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
     basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
     breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
     numbers=left,                    
     numbersep=5pt,                  
-    tabsize=4
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=4,
+    frame=single,
+    rulecolor=\color{codegray}
 }
 \lstset{style=mystyle}
 
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{\textbf{Amr Khaled Elhefnawy} - Tanta University}
+\fancyhead[L]{\textbf{Tarek Accepted 3shan Zh2t} - Tanta University}
 \fancyhead[C]{ECPC Team Reference Document}
 \fancyhead[R]{\textbf{Page \thepage}}
 \renewcommand{\headrulewidth}{0.4pt}
 
 \fancypagestyle{plain}{
     \fancyhf{}
-    \fancyhead[L]{\textbf{Amr Khaled Elhefnawy} - Tanta University}
+    \fancyhead[L]{\textbf{Tarek Accepted 3shan Zh2t} - Tanta University}
     \fancyhead[C]{ECPC Team Reference Document}
     \fancyhead[R]{\textbf{Page \thepage}}
     \renewcommand{\headrulewidth}{0.4pt}
@@ -1067,6 +1081,49 @@ int main()
 \end{lstlisting}
 \subsubsection{Offline Dynamic connectivity}
 \begin{lstlisting}[language=C++]
+/**
+ *  THE ULTIMATE CP TEMPLATE BLUEPRINT: DSU WITH ROLLBACKS & SEGMENT TREE OVER TIME
+ *
+ * 1.  WHAT PROBLEM DOES THIS SOLVE?
+ * - Keywords: "Add and remove edges", "Dynamic Connectivity", "Offline queries", "Bipartite over time".
+ * - Classic Scenarios: You have a graph and Q queries. Some queries ADD an edge, some REMOVE 
+ *   an existing edge, and some ask for the number of connected components. Standard DSU 
+ *   can only add edges, it CANNOT remove them!
+ * - The Magic: "Time Travel using Segment Tree". Since we read all queries offline, we know the 
+ *   exact "lifespan" of every edge (from time L when it was added, to time R when it was removed). 
+ *   We treat a Segment Tree as a timeline. We insert each edge into the segment tree over the 
+ *   range [L, R]. Then, we DFS through the segment tree. 
+ *   Going DOWN: We add the edges using a modified DSU. 
+ *   At the LEAVES: We are at a specific point in time! We answer the queries for that moment.
+ *   Going UP: We UNDO (rollback) the edges we added. Because we strictly use Union-by-Size 
+ *   (NO path compression), our DSU history is perfectly preserved and easily reversible!
+ *
+ * 2.  HOW TO USE IT (THE BLACK BOX)
+ * - Initialization: Create the segment tree. 
+ *       segmentTree st(N); 
+ *
+ * - Add Edges: For every edge, find its active time range [L, R) and add it.
+ *       st.set(L, R, edge(u, v));
+ *
+ * - Execution: Call the main DFS function to traverse time and answer queries.
+ *       st.get();
+ *
+ * - Complexity:
+ *       Time: O(Q log Q log N)  Every edge is split into log Q segments, and each DSU operation takes log N.
+ *       Space: O(Q log Q) to store the edges in the segment tree nodes.
+ *
+ * 3.  HOW TO ADAPT IT (THE DIALS & SWITCHES)
+ * - The `N` vs `Q` Trap: In this current template, `segmentTree(int n)` uses the same `n` for 
+ *   BOTH the number of nodes `d(n)` and the segment tree time span. Usually, Nodes (N) != Queries (Q). 
+ *   You should change the constructor to: `segmentTree(int max_time, int max_nodes) : d(max_nodes)`.
+ * - How to track L and R: Use a `map<pair<int,int>, int> active_edges`. When an edge is added at 
+ *   time `t1`, store it. When it's removed at time `t2`, call `st.set(t1, t2, edge)`. Don't forget 
+ *   to add the edges that are never removed until the end: `st.set(t1, Q, edge)`.
+ * - Answering Queries: Go to the `if (rx - lx == 1)` block inside `get(...)`. At this exact line, 
+ *   the DSU holds the exact state of the graph at time `lx`. You can print `d.get_forests()` 
+ *   or check `d.same_set(u, v)` based on what query was asked at time `lx`.
+ */
+
 class DSU
 {
 private:
@@ -2107,6 +2164,50 @@ int main()
 \subsection{HLD}
 \subsubsection{HLD}
 \begin{lstlisting}[language=C++]
+/**
+ *  THE ULTIMATE CP TEMPLATE BLUEPRINT: HEAVY-LIGHT DECOMPOSITION (HLD)
+ *
+ * 1.  WHAT PROBLEM DOES THIS SOLVE?
+ * - Keywords: "Path queries on a tree", "Subtree queries with point updates", "O(log^2 N) tree path".
+ * - Classic Scenarios: You have a tree with values on the nodes. You need to answer $Q$ queries 
+ *   that either update a node's value OR ask for the maximum/sum on the simple path between $U$ and $V$. 
+ *   Standard DFS/BFS takes $O(N)$ per query, which gives TLE. 
+ * - The Magic: "Tree Flattening into 1D". HLD cuts the tree into a set of disjoint vertical paths 
+ *   ("heavy chains"). It then maps these chains into a 1D array so we can build a Segment Tree over it. 
+ *   The mathematical guarantee is beautiful: ANY path between two nodes in the tree will cross 
+ *   at most $O(\log N)$ heavy chains. Thus, a path query becomes just $O(\log N)$ segment tree queries!
+ *
+ * 2.  HOW TO USE IT (THE BLACK BOX)
+ * - Initialization: Pass the number of nodes, the adjacency list (0-indexed or 1-indexed safely), 
+ *   and a 1-indexed vector of initial node values.
+ *       // Note: Define GRAPH as vector<vector<int>> beforehand
+ *       HLD hld(N, adj, initial_values);
+ *
+ * - Point Update: Change the value of node U to X.
+ *       hld.point_update(U, X);
+ *
+ * - Path Query: Get the maximum value on the path from U to V.
+ *       int max_val = hld.query_path(U, V);
+ *
+ * - Subtree Query: Get the maximum value in the entire subtree of U.
+ *       int sub_max = hld.query_subtree(U);
+ *
+ * - Complexity:
+ *       Time: Build $O(N)$, Updates $O(\log N)$, Subtree Queries $O(\log N)$, Path Queries $O(\log^2 N)$.
+ *       Space: $O(N)$ for the arrays and Segment Tree.
+ *
+ * 3.  HOW TO ADAPT IT (THE DIALS & SWITCHES)
+ * - Sum/Min instead of Max? 
+ *   1. Change the identity value in the `Node` constructor (e.g., `-OO` to `0` for sum, or `OO` for min).
+ *   2. Change `max(lf.val, rt.val)` in `merge()` to `+` or `min`.
+ *   3. Inside `HLD::query_path`, change `int res{-OO};` and `res = max(...)` to match your operation.
+ * - Edges instead of Nodes?
+ *   If weights are on edges, push the edge weight down to the deeper node (the child). 
+ *   Then, in `query_path`, when querying the final segment between the LCA and the other node, 
+ *   you must EXCLUDE the LCA (because the LCA holds the weight of the edge above it, which is not on the path). 
+ *   Change `seg.get(tin[v], tin[u] + 1)` to `seg.get(tin[v] + 1, tin[u] + 1)`.
+ * - GRAPH Typedef: Ensure you have `typedef vector<vector<int>> GRAPH;` globally so the constructor compiles.
+ */
 struct Node
 {
     int val;
@@ -6652,6 +6753,48 @@ int countNumberOfDistinctSubStrings(string &str)
 \subsection{2-Sat}
 \subsubsection{2sat}
 \begin{lstlisting}[language=C++]
+/**
+ *  THE ULTIMATE CP TEMPLATE BLUEPRINT: 2-SAT SOLVER (VIA KOSARAJU'S ALGORITHM & SCC)
+ *
+ * 1.  WHAT PROBLEM DOES THIS SOLVE?
+ * - Keywords: "2-SAT", "Boolean Satisfiability", "Either X or Y must happen", "Implication Graph".
+ * - Classic Scenarios: You have N boolean variables (True/False) and M constraints. 
+ *   Each constraint involves exactly two variables, usually in the form "At least one of X or Y must be true" 
+ *   or "If X is chosen, Y cannot be chosen".
+ * - The Magic: "The Implication Graph". We translate every logic clause (X OR Y) into two directed edges: 
+ *   (!X -> Y) and (!Y -> X). We treat each variable as TWO nodes: one for True (2*i) and one for False (2*i+1). 
+ *   Then we find the Strongly Connected Components (SCCs). 
+ *   - If a variable X and its negation !X end up in the SAME component, a valid assignment is IMPOSSIBLE.
+ *   - If possible, we greedily assign True to whichever version of the variable appears LATER in the 
+ *     topological sort. Because Kosaraju's algorithm builds SCCs in reverse topological order, 
+ *     `SCC_id[X] > SCC_id[!X]` mathematically guarantees a valid boolean assignment!
+ *
+ * 2.  HOW TO USE IT (THE BLACK BOX)
+ * - Base State: Define `n` (variables) and `m` (clauses).
+ * - Add Constraints: For every clause (X OR Y), call `add_clause(X, val_X, Y, val_Y)`. 
+ *   (e.g., `add_clause(1, true, 2, false)` means "Variable 1 must be True OR Variable 2 must be False").
+ * - Execution: 
+ *       1. Call `SCC()` to build the components.
+ *       2. Loop over 1 to N: check if `SCC_id[2*i] == SCC_id[2*i+1]`. If yes -> IMPOSSIBLE.
+ *       3. Otherwise, `assignment[i] = (SCC_id[2*i] > SCC_id[2*i+1])`.
+ *
+ * - Complexity:
+ *       Time: O(N + M)  Lightning fast linear time DFS traversals.
+ *       Space: O(N + M) to store the implication graph and reverse graph.
+ *
+ * 3.  HOW TO ADAPT IT (THE DIALS & SWITCHES)
+ * -  CRITICAL ARRAY SIZE WARNING: Because every variable splits into 2 nodes (positive and negative), 
+ *   your graph MUST have space for `2 * N + 2` nodes! Make sure `cond_graph`, `graph`, and `vis` arrays 
+ *   are initialized to `2 * n + 2`, NOT just `n + 1`.
+ * - How to FORCE a variable to be True? 
+ *   Add a clause stating (X OR X): `add_clause(x, true, x, true)`.
+ * - How to handle XOR (Exactly one is True)?
+ *   (X ^ Y) means they must be different. This is equivalent to TWO OR-clauses: 
+ *   (X OR Y) AND (!X OR !Y). Call `add_clause` twice for these two conditions.
+ * - How to handle XNOR (Both True or Both False)?
+ *   (X == Y) means they must be the same. Equivalent to: (!X OR Y) AND (X OR !Y).
+ */
+
 const int N = 1e5 + 9;
 
 int SCC_id[N];
@@ -6782,6 +6925,7 @@ void solve()
         cout << assignment[i] << " ";
     }
 }
+
 \end{lstlisting}
 \subsection{DAG}
 \subsubsection{Dag reachability(bitset trick)}
@@ -6912,6 +7056,49 @@ int main()
 \subsection{Eulerian path}
 \subsubsection{Eulerian path}
 \begin{lstlisting}[language=C++]
+/**
+ *  THE ULTIMATE CP TEMPLATE BLUEPRINT: EULERIAN PATH / CIRCUIT (HIERHOLZER'S ALGORITHM)
+ *
+ * 1.  WHAT PROBLEM DOES THIS SOLVE?
+ * - Keywords: "Visit every edge exactly once", "Eulerian Tour", "Draw without lifting pen", "De Bruijn Sequence".
+ * - Classic Scenarios: You are given a graph (directed or undirected) and you need to find a 
+ *   path or cycle that traverses EVERY edge exactly once. Standard DFS/BFS won't work because 
+ *   they visit *nodes* once, but here we care about *edges*.
+ * - The Magic: "Hierholzer's Algorithm". We do a greedy DFS, destroying edges as we walk over them 
+ *   using `.pop_back()` (to ensure we never process an edge twice, keeping time complexity strictly O(E)). 
+ *   When we hit a "dead end" (a node with no outgoing edges left), we add it to our answer array. 
+ *   Because of the mathematical properties of Eulerian graphs, this backtracking naturally constructs 
+ *   the exact path in REVERSE!
+ *
+ * 2.  HOW TO USE IT (THE BLACK BOX)
+ * - Initialization: Clear the `vis` array and the `ans` vector. 
+ * - Build Graph: For every edge, assign it a unique `id` from 0 to M-1.
+ *       graph[u].push_back({v, id});
+ *       // If undirected, add the reverse edge with the SAME id!
+ *       // graph[v].push_back({u, id}); 
+ *
+ * - Execution: Call `dfs(start_node)`. 
+ *       dfs(start_node);
+ *       reverse(ans.begin(), ans.end()); // ? CRITICAL: The path is generated backwards!
+ *
+ * - Complexity:
+ *       Time: O(V + E)  Each edge is popped and visited exactly once.
+ *       Space: O(V + E) for the adjacency list and recursion stack.
+ *
+ * 3.  HOW TO ADAPT IT (THE DIALS & SWITCHES)
+ * -  CRITICAL PREREQUISITE (EXISTENCE CHECK): This DFS assumes the Eulerian path ALREADY EXISTS. 
+ *   If you run it on a random graph, it will produce garbage. You MUST check the degrees first!
+ *   - Undirected Circuit: All nodes must have an EVEN degree.
+ *   - Undirected Path: Exactly 0 or 2 nodes must have an ODD degree. (Start DFS from an odd node!).
+ *   - Directed Circuit: Every node's In-Degree == Out-Degree.
+ *   - Directed Path: At most one node has (Out - In == 1) [Start Node], and one has (In - Out == 1) [End Node].
+ * - Lexicographically Smallest Path?
+ *   If the problem asks for the lexicographically smallest path, sort the adjacency list of every 
+ *   node in DESCENDING order before starting the DFS. Since we use `.pop_back()`, the smallest 
+ *   destinations will be popped first!
+ * - Disconnected components: If the graph has isolated edges, a single DFS won't catch them. 
+ *   Always check if `ans.size() == M + 1` at the end to ensure all edges were visited.
+ */
 const int N = 1e5, M = 1e5;
 
 struct Edge
@@ -7447,6 +7634,47 @@ vector<int> topSort()
 \subsection{Graph connectivity}
 \subsubsection{Articulations}
 \begin{lstlisting}[language=C++]
+/**
+ *  THE ULTIMATE CP TEMPLATE BLUEPRINT: BRIDGES & ARTICULATION POINTS (CUT VERTICES & EDGES)
+ *
+ * 1.  WHAT PROBLEM DOES THIS SOLVE?
+ * - Keywords: "Critical connections", "Single point of failure", "Vulnerable roads/servers", "Network disconnection".
+ * - Classic Scenarios: You have a network of cities and bidirectional roads. You need to find which 
+ *   specific road (Bridge) or which specific city (Articulation Point), if destroyed, would split the 
+ *   network into two or more disconnected components. Naively removing each edge/node and running DFS 
+ *   takes O(E * (V + E)), which yields TLE for large graphs.
+ * - The Magic: "Discovery Time (disc) and Lowest Reachable Time (low)". As we do a DFS, we timestamp 
+ *   when we visit each node (`disc`). We also track the "oldest" ancestor we can reach via a back-edge (`low`).
+ *   - BRIDGE: If a child `v` has `low[v] > disc[u]`, it means the subtree at `v` has NO back-edges reaching 
+ *     above `u` or even to `u`. The edge `u-v` is its ONLY lifeline!
+ *   - ARTICULATION POINT (AP): If `low[v] >= disc[u]`, the subtree at `v` can at best reach `u`, but nothing 
+ *     above it. Destroying `u` traps `v`'s subtree!
+ *
+ * 2.  HOW TO USE IT (THE BLACK BOX)
+ * - Initialization: Clear the `adj`, `bridges`, `articulation_points`, `disc`, and `low` arrays. 
+ *   Set `timer = 0`.
+ * - Build Graph: Add undirected edges to the `adj` list.
+ * - Execution: Call `dfs(i, -1)` for all unvisited nodes (to handle disconnected graphs).
+ *       for(int i = 1; i <= n; i++) {
+ *           if(!disc[i]) dfs(i, -1);
+ *       }
+ *
+ * - Complexity:
+ *       Time: O(V + E)  Just a single DFS traversal!
+ *       Space: O(V + E) for adjacency list, recursion stack, and tracking arrays.
+ *
+ * 3.  HOW TO ADAPT IT (THE DIALS & SWITCHES)
+ * -  MULTIPLE EDGES (MULTIGRAPH) TRAP: If there are multiple direct edges between `u` and `v`, 
+ *   the condition `if(v == p)` is dangerous because it blocks ALL edges back to the parent, even valid 
+ *   parallel edges. FIX: Pass the `edge_index` instead of the parent `node` to the DFS, and skip only 
+ *   the specific edge that brought you to `u`.
+ * - Why a `set` for Articulation Points? A node might be an AP for multiple different branches of its 
+ *   subtree. Pushing to a vector would cause duplicates. `std::set` handles this automatically, but if 
+ *   you need more speed, use a boolean array `is_AP[MAXN]` instead.
+ * - Bridge Tree (2-Edge-Connected Components): After finding all bridges, if you remove them from the graph, 
+ *   the remaining connected components can be "shrunk" into single super-nodes. The resulting graph 
+ *   will always be a perfect Tree!
+ */
 #include <bits/stdc++.h>
 using namespace std;
 
@@ -9832,6 +10060,47 @@ void hassan() {
 \subsection{Trees}
 \subsubsection{Rerooting}
 \begin{lstlisting}[language=C++]
+/**
+ *  THE ULTIMATE CP TEMPLATE BLUEPRINT: TREE REROOTING DP (IN-OUT DP)
+ *
+ * 1.  WHAT PROBLEM DOES THIS SOLVE?
+ * - Keywords: "Sum of distances to all nodes", "Tree Rerooting", "Tree DP", "Calculate for EVERY node".
+ * - Classic Scenarios: You are given a tree and asked to find the sum of distances from node U to 
+ *   ALL other nodes, but you need to output this for EVERY node U in the tree. A naive BFS/DFS 
+ *   from every single node takes O(N^2), which gives TLE.
+ * - The Magic: "Rerooting Technique". We solve it in two linear passes:
+ *   1. Bottom-Up (dfs): Root the tree arbitrarily at node 1. Calculate the subtree size (`sz`) 
+ *      and the sum of distances from node 1 to all nodes in its subtree (`dist`).
+ *   2. Top-Down (dfs2): Shift the root from parent `u` to child `v` in O(1) time! 
+ *      When we move the root from `u` to `v`, all nodes in `v`'s subtree become 1 step CLOSER 
+ *      (so we subtract `sz[v]`), and all other nodes in the tree become 1 step FURTHER 
+ *      (so we add `n - sz[v]`).
+ *
+ * 2.  HOW TO USE IT (THE BLACK BOX)
+ * - Initialization: 
+ *       Ensure `GRAPH` is defined (e.g., `typedef vector<vector<int>> GRAPH;`).
+ *       The `solve()` function automatically initializes all vectors to size `N + 1`.
+ *
+ * - Execution: 
+ *       1. Build the undirected graph.
+ *       2. Call `dfs(1, 0)` to precalculate subtree sizes and the answer for node 1.
+ *       3. Set the base case: `ans[1] = dist[1]`.
+ *       4. Call `dfs2(1, 0)` to magically propagate the answer to all other nodes.
+ *
+ * - Complexity:
+ *       Time: O(N)  Just two simple DFS traversals.
+ *       Space: O(N) for the tree, sizes, and distances.
+ *
+ * 3.  HOW TO ADAPT IT (THE DIALS & SWITCHES)
+ * - Weighted Edges?
+ *   If edges have weights `W`, change `graph` to store pairs `{neighbor, weight}`.
+ *   In `dfs1`: `dist[u] += dist[v] + sz[v] * W`.
+ *   In `dfs2`: `ans[v] = ans[u] - sz[v] * W + (n - sz[v]) * W`.
+ * - Max Distance instead of Sum?
+ *   Rerooting can also find the farthest node from every node! However, the transition is harder: 
+ *   you must keep track of the MAXIMUM and SECOND MAXIMUM depths in `dfs1` so that when you reroot 
+ *   into the branch that contained the maximum, you can fall back to the second maximum.
+ */
 int n;
 vector<int> sz, dist, ans;
 GRAPH graph;
@@ -19698,6 +19967,46 @@ vector<int> compress(vector<int> &v)
 \end{lstlisting}
 \subsection{Hashing segment tree}
 \begin{lstlisting}[language=C++]
+/**
+ *  THE ULTIMATE CP TEMPLATE BLUEPRINT: DYNAMIC STRING HASHING (SEGMENT TREE)
+ *
+ * 1.  WHAT PROBLEM DOES THIS SOLVE?
+ * - Keywords: "Dynamic Palindrome Queries", "Substring Equality with Point Updates", "Double Hashing".
+ * - Classic Scenarios: You have a string and you need to answer queries like "Is the substring [L, R] 
+ *   a palindrome?" OR "Does substring [L1, R1] match [L2, R2]?". Crucially, the string is NOT static; 
+ *   you will receive point updates (changing the character at index X).
+ * - The Magic: "Polynomial Rolling Hash inside a Segment Tree". A rolling hash is just a sum of terms 
+ *   (char * base^i). Segment trees are perfect for point updates and range sums! By maintaining the hash 
+ *   in a Segment Tree, updates take O(log N). To query a range [L, R], we sum the hashes in that range 
+ *   and "normalize" it by multiplying by the modular inverse of base^(L-1).
+ *
+ * 2.  HOW TO USE IT (THE BLACK BOX)
+ * - Initialization (CRITICAL): You MUST call `init()` once at the start of `main()` to precompute 
+ *   the powers and modular inverses.
+ * - 1-Based Indexing ONLY: Your string indices and queries MUST be 1-based (from 1 to N).
+ *       HashingSegmentTree forward_tree(N), backward_tree(N);
+ * - Building: Add characters one by one. For the backward tree, insert at `N - idx + 1`.
+ *       forward_tree.update(i, s[i]);
+ *       backward_tree.update(n - i + 1, s[i]);
+ * - Execution: 
+ *       To update a char: forward_tree.update(idx, new_c); backward_tree.update(n - idx + 1, new_c);
+ *       To check palindrome: isPalindrome(forward_tree, backward_tree, L, R, n);
+ *
+ * - Complexity:
+ *       Time: Initialization O(N), Updates O(log N), Queries O(log N).
+ *       Space: O(N) for the precomputed arrays and Segment Tree nodes.
+ *
+ * 3.  HOW TO ADAPT IT (THE DIALS & SWITCHES)
+ * -  0-Based Indexing Crash Warning: The `query` function uses `inv1[l - 1]`. If you pass `l = 0`, 
+ *   it will access index `-1` and cause Undefined Behavior. ALWAYS use 1-based indexing for queries.
+ * - Hack Prevention: This template uses Double Hashing with primes 1e9+7 and 2e9+11. It is virtually 
+ *   impossible to break (anti-hash tests will fail). If you face a very strict Time Limit (TLE), you 
+ *   can convert it to Single Hashing (remove mod2, base2, pw2, inv2) and use a randomized base instead.
+ * - `#define int long long`: This template heavily relies on this macro. If you ever remove it, you 
+ *   MUST change all hash values, modulos, and products to `long long` to prevent integer overflow 
+ *   during `(A * B) % MOD`.
+ */
+
 #define int long long
 const int N = 1e5 + 5, mod1 = 1e9 + 7, mod2 = 2e9 + 11;
 ll base1 = 31, base2 = 37, pw1[N + 1], pw2[N + 1], inv1[N + 1], inv2[N + 1];
@@ -19805,6 +20114,48 @@ bool isPalindrome(HashingSegmentTree &a, HashingSegmentTree &b, int &l, int &r, 
 \end{lstlisting}
 \subsection{Hashing treap}
 \begin{lstlisting}[language=C++]
+/**
+ *  THE ULTIMATE CP TEMPLATE BLUEPRINT: IMPLICIT TREAP WITH STRING HASHING
+ *
+ * 1.  WHAT PROBLEM DOES THIS SOLVE?
+ * - Keywords: "Dynamic String", "Insert/Delete characters", "Shift indices", "Palindrome queries".
+ * - Classic Scenarios: A Segment Tree can update a character at index X, but it CANNOT insert 
+ *   a new character (shifting everything right) or delete a substring (shifting everything left). 
+ *   If a problem asks you to insert/delete characters AND query substrings/palindromes, 
+ *   standard Segment Trees or Fenwick trees will fail.
+ * - The Magic: "The Implicit Treap". It acts as a dynamic array where every node represents 
+ *   a character. By using the size of the left subtree as the "implicit index", we can Split 
+ *   and Merge the string in O(log N) time. We augment each node to store the Rolling Hash of 
+ *   its subtree. When we merge nodes, we mathematically combine their hashes using precomputed 
+ *   powers of our base.
+ *
+ * 2.  HOW TO USE IT (THE BLACK BOX)
+ * - Initialization: You MUST call `init()` in `main()` to precompute the `pw` array.
+ *       Treap a(s), b(reversed_s);
+ * - Insertions: Insert character `c` at 1-based position `pos`.
+ *       a.addChar(pos, c);
+ * - Deletions: Delete the entire substring from 1-based index `L` to `R`.
+ *       a.deleteRange(L, R);
+ * - Queries: Get the rolling hash of the substring [L, R].
+ *       int h = a.getHash(L, R);
+ *
+ * - Complexity:
+ *       Time: O(log N) for Insert, Delete, and Query!
+ *       Space: O(N) for the Treap nodes.
+ *
+ * 3.  HOW TO ADAPT IT (THE DIALS & SWITCHES)
+ * - The Palindrome Reverse Math: When tracking a reversed string dynamically, indices flip. 
+ *   If the current string length is `N`, the equivalent of index `idx` in the reversed string 
+ *   is `N - idx + 1`. Note that `N` MUST be manually updated (e.g., `n++` or `n -= length`) 
+ *   exactly as shown in `main()` whenever you insert or delete!
+ * - Memory Limit Exceeded (MLE) Warning: In `deleteRange`, the code drops the `b[0]` component 
+ *   (the deleted segment) without freeing the memory. In competitive programming, this is 
+ *   usually fine. But if you face MLE on huge test cases, you should write a recursive `destroy()` 
+ *   function to `delete` the extracted nodes.
+ * - Single vs Double Hashing: This template uses Single Hashing (`mod = 1e9+7`). If you get 
+ *   Wrong Answer (WA) due to malicious anti-hash tests, you can upgrade `h` to a `pair<int,int>` 
+ *   and apply double hashing just like in the Segment Tree template.
+ */
 #include <bits/stdc++.h>
 using namespace std;
 #define ll long long

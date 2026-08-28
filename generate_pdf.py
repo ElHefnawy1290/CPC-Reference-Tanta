@@ -50,8 +50,9 @@ with open("main.tex", "w", encoding="utf-8") as f:
 \definecolor{codegreen}{rgb}{0,0.6,0}
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
 \definecolor{codepurple}{rgb}{0.58,0,0.82}
-\definecolor{backcolour}{rgb}{0.98,0.98,0.98}
+\definecolor{backcolour}{rgb}{0.96,0.96,0.96}
 \definecolor{linkcolor}{rgb}{0,0.3,0.6}
+\definecolor{keywordcolor}{rgb}{0.8,0.1,0.4}
 
 \hypersetup{
     colorlinks=true,
@@ -59,28 +60,41 @@ with open("main.tex", "w", encoding="utf-8") as f:
     filecolor=magenta,      
     urlcolor=blue,
     pdftitle={ECPC Reference Document},
-    pdfauthor={Amr Khaled Elhefnawy}
+    pdfauthor={Tarek Accepted 3shan Zh2t}
 }
 
 \lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\itshape\color{codegreen},
+    keywordstyle=\bfseries\color{keywordcolor},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
     basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
     breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
     numbers=left,                    
     numbersep=5pt,                  
-    tabsize=4
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=4,
+    frame=single,
+    rulecolor=\color{codegray}
 }
 \lstset{style=mystyle}
 
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{\textbf{Amr Khaled Elhefnawy} - Tanta University}
+\fancyhead[L]{\textbf{Tarek Accepted 3shan Zh2t} - Tanta University}
 \fancyhead[C]{ECPC Team Reference Document}
 \fancyhead[R]{\textbf{Page \thepage}}
 \renewcommand{\headrulewidth}{0.4pt}
 
 \fancypagestyle{plain}{
     \fancyhf{}
-    \fancyhead[L]{\textbf{Amr Khaled Elhefnawy} - Tanta University}
+    \fancyhead[L]{\textbf{Tarek Accepted 3shan Zh2t} - Tanta University}
     \fancyhead[C]{ECPC Team Reference Document}
     \fancyhead[R]{\textbf{Page \thepage}}
     \renewcommand{\headrulewidth}{0.4pt}
