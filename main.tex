@@ -8227,6 +8227,41 @@ struct LCA
 };
 
 \end{lstlisting}
+\subsubsection{Lca o1}
+\begin{lstlisting}[language=C++]
+  vector<int> dep(n), in(n), out(n), seq, pa(n, -1);
+
+  auto dfs = [&](auto &&self, int u) -> void {
+	in[u] = seq.size();
+	seq.push_back(u);
+	for (auto v : G[u])
+	  if (v != pa[u]) {
+		pa[v] = u, dep[v] = dep[u] + 1;
+		self(self, v);
+	  }
+	out[u] = seq.size();
+  };
+  seq.reserve(n);
+  dfs(dfs, 0);
+
+  const int M = __lg(n);
+  vector dp(M + 1, vector<int>(n));
+  auto cmp = [&](int a, int b) { return dep[a] < dep[b] ? a : b; };
+
+  dp[0] = seq;
+  for (int i = 0; i < M; i++)
+	for (int j = 0; j + (2 << i) <= n; j++)
+	  dp[i + 1][j] = cmp(dp[i][j], dp[i][j + (1 << i)]);
+
+  auto lca = [&](int a, int b) {
+	if (a == b)return a;
+	a = in[a] + 1, b = in[b] + 1;
+	if (a > b)swap(a, b);
+	int h = __lg(b - a);
+	return pa[cmp(dp[h][a], dp[h][b - (1 << h)])];
+  };
+
+\end{lstlisting}
 \subsection{MST}
 \subsubsection{Directed MST}
 \begin{lstlisting}[language=C++]
@@ -10735,6 +10770,418 @@ vector<ll> multiply(vector<ll> const &a, vector<ll> const &b)
     while (fa.size() > 1 && fa.back() == 0)
         fa.pop_back();
     return fa;
+}
+\end{lstlisting}
+\subsection{FFT}
+\subsubsection{bitIntMultiply}
+\begin{lstlisting}[language=C++]
+string mul_two_big_int(const string &s1, const string &s2) {
+    int n = s1.size(), m = s2.size();
+
+    vector<int> poly1(n), poly2(m);
+    for (int i = 0; i < n; ++i) {
+        poly1[n-i-1] = s1[i] - '0';
+    }
+
+    for (int i = 0; i < m; ++i) {
+        poly2[m-i-1] = s2[i] - '0';
+    }
+
+    vector<int> ans = multiply(poly1, poly2);
+    int k = ans.size();
+
+    for (int i = 0; i < k - 1; ++i) {
+        ans[i + 1] += ans[i] / 10;
+        ans[i] = ans[i] % 10;
+    }
+
+    string final = to_string(ans[k - 1]);
+    for (int i = k - 2; i >= 0; --i) {
+        final += (char)(ans[i] + '0');
+    }
+
+    for (int i = 0; i < k; ++i) {
+        if(final[i] != '0') return final.substr(i);
+    }
+    return "0";
+}
+
+string power_of_big_int(string s, int p) {
+    string ans = "1";
+    while (p) {
+        if(p&1) ans = mul_two_big_int(ans, s);
+        s = mul_two_big_int(s, s);
+        p >>= 1;
+    }
+    return ans;
+}
+\end{lstlisting}
+\subsubsection{fft}
+\begin{lstlisting}[language=C++]
+// Multiplies two polynomials (or large numbers) in O(N log N) time
+// Uses the Fast Fourier Transform (FFT) to convert coefficients to point-values and back
+
+#include <bits/stdc++.h>
+using namespace std;
+#define int long long
+
+using cd = complex<double>;
+const double PI = acos(-1);
+
+// Fast Fourier Transform: 
+// invert = false converts coefficients to point-values (Forward FFT)
+// invert = true converts point-values back to coefficients (Inverse FFT)
+void fft(vector<cd> &a, bool invert) {
+    int n = a.size();
+
+    // Bit-reversal permutation: Rearranges elements so we can build the FFT bottom-up iteratively
+    for (int i = 1, j = 0; i < n; i++) {
+        int bit = n >> 1;
+        for (; j & bit; bit >>= 1)
+            j ^= bit;
+        j ^= bit;
+        if (i < j)
+            swap(a[i], a[j]);
+    }
+
+    // Iterative FFT: Merge smaller subproblems into larger ones
+    for (int len = 2; len <= n; len <<= 1) {
+        double ang = 2 * PI / len * (invert ? -1 : 1);
+        cd wlen(cos(ang), sin(ang));
+        for (int i = 0; i < n; i += len) {
+            cd w(1.0, 0.0);
+            for (int j = 0; j < len / 2; j++) {
+                // Butterfly operation
+                cd u = a[i + j], v = a[i + j + len / 2] * w;
+                a[i + j] = u + v;
+                a[i + j + len / 2] = u - v;
+                w *= wlen;
+            }
+        }
+    }
+
+    // If doing Inverse FFT, divide by N to complete the interpolation
+    if (invert) {
+        for (cd &x: a)
+            x /= n;
+    }
+}
+
+// Multiply two polynomials using FFT
+vector<int> multiply(const vector<int> &a, const vector<int> &b) {
+    vector<cd> fa(a.begin(), a.end()), fb(b.begin(), b.end());
+    
+    // Pad the polynomial sizes to the nearest power of 2 (required for Radix-2 FFT)
+    int n = 1;
+    while (n < (int) (a.size() + b.size()))
+        n <<= 1;
+    fa.resize(n);
+    fb.resize(n);
+
+    // 1. Evaluate polynomials at complex roots of unity
+    fft(fa, false);
+    fft(fb, false);
+    
+    // 2. Point-wise multiplication in O(N) time
+    for (int i = 0; i < n; i++)
+        fa[i] *= fb[i];
+        
+    // 3. Interpolate the results back into polynomial coefficients
+    fft(fa, true);
+
+    vector<int> result(n);
+    for (int i = 0; i < n; i++)
+        // Round to nearest integer to fix minor floating-point inaccuracies
+        result[i] = round(fa[i].real());
+
+    // Optional: trim trailing zeros
+    while (!result.empty() && result.back() == 0)
+        result.pop_back();
+
+    return result;
+}
+
+// Optional: test usage
+void solve() {
+    int n;
+    cin >> n;
+
+    // Read coefficients from degree 0 up to degree n
+    vector<int> a(n + 1), b(n + 1);
+    for (int i = 0; i <= n; i++) cin >> a[i];
+    for (int i = 0; i <= n; i++) cin >> b[i];
+
+    // Get the multiplied polynomial
+    vector<int> c = multiply(a, b);
+    
+    // The resulting polynomial has degree 2N, so we print 2N + 1 coefficients
+    for (int i = 0; i <= 2*n; i++)
+        // Handle cases where trailing zeros were trimmed
+        cout << (i < c.size() ? c[i] : 0) << " ";
+    cout << endl;
+}
+
+/*
+If
+a.size() = A (i.e. degree = A - 1)
+b.size() = B (i.e. degree = B - 1)
+
+Then:
+ result.size() = A + B - 1 (before trimming)
+ */
+
+signed main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    cin >> t;
+    while (t--) solve();
+    return 0;
+}
+\end{lstlisting}
+\subsubsection{fftMod}
+\begin{lstlisting}[language=C++]
+// Arbitrary Modulo Polynomial Convolution (MTT) in O(N log N) time
+// Multiplies two polynomials modulo ANY number (does not require NTT primes)
+
+#include <bits/stdc++.h>
+using namespace std;
+
+#define rep(aa, bb, cc) for(int aa = bb; aa < cc;aa++)
+#define sz(a) (int)a.size()
+typedef long long ll;
+typedef vector<int> vi;
+typedef complex<double> C;
+typedef vector<double> vd;
+
+// Highly optimized Fast Fourier Transform
+void fft(vector<C>& a) {
+    int n = sz(a), L = 31 - __builtin_clz(n);
+    static vector<complex<long double>> R(2, 1);
+    static vector<C> rt(2, 1);  // Caches roots of unity for speed
+    
+    // Precompute roots of unity
+    for (static int k = 2; k < n; k *= 2) {
+        R.resize(n); rt.resize(n);
+        auto x = polar(1.0L, acos(-1.0L) / k);
+        rep(i,k,2*k) rt[i] = R[i] = i&1 ? R[i/2] * x : R[i/2];
+    }
+    
+    // Bit-reversal permutation
+    vi rev(n);
+    rep(i,0,n) rev[i] = (rev[i / 2] | (i & 1) << L) / 2;
+    rep(i,0,n) if (i < rev[i]) swap(a[i], a[rev[i]]);
+    
+    // Iterative FFT
+    for (int k = 1; k < n; k *= 2)
+        for (int i = 0; i < n; i += 2 * k) rep(j,0,k) {
+                // Hand-rolled complex multiplication for a ~25% speed boost
+                auto x = (double *)&rt[j+k], y = (double *)&a[i+j+k];        
+                C z(x[0]*y[0] - x[1]*y[1], x[0]*y[1] + x[1]*y[0]);           
+                a[i + j + k] = a[i + j] - z;
+                a[i + j] += z;
+            }
+}
+ 
+// Arbitrary Modulo Convolution
+template<int M> vi convMod(const vi &a, const vi &b) {
+    if (a.empty() || b.empty()) return {};
+    vi res(sz(a) + sz(b) - 1);
+    
+    // Pad to nearest power of 2
+    int B=32-__builtin_clz(sz(res)), n=1<<B;
+    
+    // Split values into chunks of roughly sqrt(M) to prevent floating-point overflow
+    int cut=int(sqrt(M)); 
+    vector<C> L(n), R(n), outs(n), outl(n);
+    
+    // Encode polynomial A as (A_div + i * A_mod) and B as (B_div + i * B_mod)
+    rep(i,0,sz(a)) L[i] = C((int)a[i] / cut, (int)a[i] % cut);
+    rep(i,0,sz(b)) R[i] = C((int)b[i] / cut, (int)b[i] % cut);
+    fft(L), fft(R);
+    
+    // Clever math trick to extract the transforms of the real/imaginary parts using conjugates
+    rep(i,0,n) {
+        int j = -i & (n - 1); // Equivalent to (n - i) % n
+        outl[j] = (L[i] + conj(L[j])) * R[i] / (2.0 * n);
+        outs[j] = (L[i] - conj(L[j])) * R[i] / (2.0 * n) / 1i;
+    }
+    
+    // Inverse FFT to get the cross-multiplications
+    fft(outl), fft(outs);
+    
+    // Recombine the pieces modulo M
+    rep(i,0,sz(res)) {
+        ll av = ll(real(outl[i])+.5), cv = ll(imag(outs[i])+.5);
+        ll bv = ll(imag(outl[i])+.5) + ll(real(outs[i])+.5);
+        res[i] = ((av % M * cut + bv) % M * cut + cv) % M;
+    }
+    return res;
+}
+
+// 
+const int MOD = 1e9 + 7;
+vector<int> a = {1, 2, 3};
+vector<int> b = {4, 5, 6};
+
+vector<int> result = convMod<MOD>(a, b);
+\end{lstlisting}
+\subsubsection{ntt}
+\begin{lstlisting}[language=C++]
+
+
+
+// This template implements the Number Theoretic Transform (NTT),
+//  which is used to multiply two polynomials in $O(N \log N)$ time
+//  modulo a specific prime. It also includes the building blocks for
+//  Arbitrary Modulo
+//  Convolution (MTT) using the Chinese Remainder Theorem (CRT).
+
+#include <bits/stdc++.h>
+using namespace std;
+typedef long long ll;
+
+// Standard NTT-friendly prime (998244353) and its primitive root
+const ll mod = (119 << 23) + 1, root = 62; 
+// For p < 2^30 there is also e.g. 5 << 25, 7 << 26, 479 << 21
+// and 483 << 21 (same root). The last two are > 10^9.
+
+// Computes (b^e) % mod in O(log e) time
+ll modpow(ll b, ll e) {
+    ll ans = 1;
+    for (; e; b = b * b % mod, e /= 2)
+        if (e & 1) ans = ans * b % mod;
+    return ans;
+}
+
+// Finds a primitive root for the given modulo dynamically.
+// This is useful if you change the 'mod' variable and don't know its root.
+int generator () {
+    vector<int> fact;
+    int phi = mod-1,  n = phi;
+    
+    // Prime factorize phi
+    for (int i=2; i*i<=n; ++i)
+        if (n % i == 0) {
+            fact.push_back (i);
+            while (n % i == 0) n /= i;
+        }
+    if (n > 1) fact.push_back (n);
+
+    // Test candidates to find the primitive root
+    for (int res=2; res<=mod; ++res) {
+        bool ok = true;
+        for (size_t i=0; i<fact.size() && ok; ++i)
+            ok &= modpow (res, phi / fact[i]) != 1;
+        if (ok)  return res;
+    }
+    return -1;
+}
+
+// Computes (b^e) % m with a custom modulo 'm'
+int modpow(int b, int e, int m) {
+    int ans = 1;
+    for (; e; b = (ll)b * b % m, e /= 2)
+        if (e & 1) ans = (ll)ans * b % m;
+    return ans;
+}
+
+// The core Number Theoretic Transform (NTT) algorithm
+// Converts polynomial coefficients to point-values and vice versa
+void ntt(vector<int> &a) {
+    int n = (int)a.size(), L = 31 - __builtin_clz(n);
+    vector<int> rt(2, 1); 
+    
+    // Precompute roots of unity
+    for (int k = 2, s = 2; k < n; k *= 2, s++) { 
+        rt.resize(n);
+        int z[] = {1, modpow(root, mod >> s, mod)};
+        for (int i = k; i < 2*k; ++i) rt[i] = (ll)rt[i / 2] * z[i & 1] % mod;
+    }
+    
+    // Bit-reversal permutation
+    vector<int> rev(n);
+    for (int i = 0; i < n; ++i) rev[i] = (rev[i / 2] | (i & 1) << L) / 2;
+    for (int i = 0; i < n; ++i) if (i < rev[i]) swap(a[i], a[rev[i]]);
+    
+    // Iterative butterfly operations
+    for (int k = 1; k < n; k *= 2) {
+        for (int i = 0; i < n; i += 2 * k) {
+            for (int j = 0; j < k; ++j) {
+                int z = (ll)rt[j + k] * a[i + j + k] % mod, &ai = a[i + j];
+                a[i + j + k] = ai - z + (z > ai ? mod : 0);
+                ai += (ai + z >= mod ? z - mod : z);
+            }
+        }
+    }
+}
+
+// Multiplies two polynomials (a and b) modulo 'mod'
+vector<int> conv(const vector<int> &a, const vector<int> &b) {
+    if (a.empty() || b.empty()) return {};
+    int s = (int)a.size() + (int)b.size() - 1, B = 32 - __builtin_clz(s), n = 1 << B;
+    int inv = modpow(n, mod - 2, mod);
+    vector<int> L(a), R(b), out(n);
+    L.resize(n), R.resize(n);
+    
+    ntt(L), ntt(R); // Convert to point-values
+    for (int i = 0; i < n; ++i) out[-i & (n - 1)] = (ll)L[i] * R[i] % mod * inv % mod; // Multiply
+    ntt(out); // Convert back to coefficients
+    
+    return {out.begin(), out.begin() + s};
+}
+
+// Chinese Remainder Theorem for 2 variables
+// Solves: x = a (mod m1) and x = b (mod m2)
+ll CRT(ll a, ll m1, ll b, ll m2) {
+    __int128 m = m1*m2;
+    ll ans = a*m2%m*modpow(m2, m1-2, m1)%m + m1*b%m*modpow(m1, m2-2, m2)%m;
+    return ans % m;
+}
+
+/*
+// --- ARBITRARY MODULO MULTIPLICATION SETUP ---
+// This commented section uses 3 specific NTT-friendly primes.
+// By computing the polynomial multiplication separately for mod1, mod2, and mod3,
+// you can use the 3-variable CRT function below to find the exact answer modulo ANYTHING (like 10^9+7).
+
+int mod, root, desired_mod = 1000000007;
+const int mod1 = 167772161;
+const int mod2 = 469762049;
+const int mod3 = 754974721;
+const int root1 = 3;
+const int root2 = 3;
+const int root3 = 11;
+
+// Chinese Remainder Theorem for 3 variables
+int CRT(int a, int b, int c, int m1, int m2, int m3) {
+    __int128 M = (__int128)m1*m2*m3;
+    ll M1 = (ll)m2*m3;
+    ll M2 = (ll)m1*m3;
+    ll M3 = (ll)m2*m1;
+
+    int M_1 = modpow(M1%m1, m1 - 2, m1);
+    int M_2 = modpow(M2%m2, m2 - 2, m2);
+    int M_3 = modpow(M3%m3, m3 - 2, m3);
+
+    __int128 ans = (__int128)a*M1*M_1;
+    ans += (__int128)b*M2*M_2;
+    ans += (__int128)c*M3*M_3;
+
+    return (ans % M) % desired_mod;
+}
+*/
+\end{lstlisting}
+\subsubsection{pow}
+\begin{lstlisting}[language=C++]
+vector<int> poly_pow(vector<int> poly, int p) {
+    vector<int> ans{1};
+    while (p) {
+        if(p&1) ans = multiply(ans, poly);
+        poly = multiply(poly, poly);
+        p >>= 1;
+    }
+    return ans;
 }
 \end{lstlisting}
 \subsection{Linear algebra}
@@ -15211,6 +15658,356 @@ public:
 };
 
 \end{lstlisting}
+\subsection{Li Chao Tree}
+\begin{lstlisting}[language=C++]
+#include <bits/stdc++.h>
+using namespace std;
+
+typedef long long ll;
+
+const ll INF = 2e18; // Infinity for initializations
+
+// A structure to represent the line y = mx + c
+struct Line {
+    ll m, c;
+    // For Maximization, initialize empty lines with -INF. 
+    // (If you need Minimization, change this to +INF).
+    Line(ll m = 0, ll c = -INF) : m(m), c(c) {}
+    
+    ll eval(ll x) { 
+        return m * x + c; 
+    }
+};
+
+struct LiChaoTree {
+    struct Node {
+        Line line;
+        int lc, rc; // Left child and Right child indices
+        Node() : line(), lc(-1), rc(-1) {}
+    };
+
+    vector<Node> tree;
+    ll min_x, max_x;
+
+    // Initialize with your expected coordinate range (e.g., -1e9 to 1e9)
+    LiChaoTree(ll min_x, ll max_x) : min_x(min_x), max_x(max_x) {
+        tree.push_back(Node());
+    }
+
+    void add_line(Line nw, int u, ll l, ll r) {
+        ll m = l + (r - l) / 2;
+        
+        // Change > to < if you want to solve a Minimization problem
+        bool left_better = nw.eval(l) > tree[u].line.eval(l);
+        bool mid_better = nw.eval(m) > tree[u].line.eval(m);
+
+        // The line that is better at the midpoint \"owns\" this node
+        if (mid_better) {
+            swap(tree[u].line, nw);
+        }
+
+        if (r - l == 1) return; // Leaf node reached
+
+        // If the old line was better at one of the boundaries, 
+        // it means the lines intersect. Push the losing line down to the children!
+        if (left_better != mid_better) {
+            if (tree[u].lc == -1) {
+                tree[u].lc = tree.size();
+                tree.push_back(Node());
+            }
+            add_line(nw, tree[u].lc, l, m);
+        } else {
+            if (tree[u].rc == -1) {
+                tree[u].rc = tree.size();
+                tree.push_back(Node());
+            }
+            add_line(nw, tree[u].rc, m, r);
+        }
+    }
+
+    void add_line(ll m, ll c) {
+        add_line(Line(m, c), 0, min_x, max_x);
+    }
+
+    ll query(ll x, int u, ll l, ll r) {
+        if (u == -1) return -INF; // Change to +INF for Minimization
+        
+        ll m = l + (r - l) / 2;
+        ll cur = tree[u].line.eval(x);
+        
+        if (r - l == 1) return cur; // Leaf node reached
+        
+        // Change max() to min() for Minimization
+        if (x < m) {
+            return max(cur, query(x, tree[u].lc, l, m));
+        } else {
+            return max(cur, query(x, tree[u].rc, m, r));
+        }
+    }
+
+    ll query(ll x) {
+        return query(x, 0, min_x, max_x);
+    }
+};
+
+
+How to use it:Initialize: Define the range of your $X$-coordinates (your $k$ queries).
+
+// If your query values k range from -10^5 to 10^5:
+LiChaoTree lct(-100005, 100005);
+
+Add Lines: Loop through your pairs and insert the lines.// Insert line y = mx + c
+lct.add_line(m, c);
+
+Query: Find the maximum $y$ for a specific $x$.
+ll max_y = lct.query(k);
+
+
+add_line(m, c): Add a line to the set in $O(\log(\text{range}))$ time.
+query(x): Find the maximum $y$ among all lines at coordinate $x$ in $O(\log(\text{range}))$ time.
+\end{lstlisting}
+\subsection{additonal geometry}
+\begin{lstlisting}[language=C++]
+
+// cosine rule:
+
+c^2 = a^2 + b^2 - 2ab * cos(C) a^2 = b^2 + c^2 - 2bc * cos(A) b^2 = a^2 + c^2 - 2ac * cos(B)
+
+cos(C) = (a^2 + b^2 - c^2) / (2ab) cos(A) = (b^2 + c^2 - a^2) / (2bc) cos(B) = (a^2 + c^2 - b^2) / (2ac)
+
+C = cos^(-1) [(a^2 + b^2 - c^2) / (2ab)] A = cos^(-1) [(b^2 + c^2 - a^2) / (2bc)] B = cos^(-1) [(a^2 + c^2 - b^2) / (2ac)]
+
+
+   // if I am given a set of points how to sort counter clock wise around the origin
+
+// The arg() Function: This function automatically returns a mathematical value strictly within the
+// interval $(-\pi, \pi]$, which perfectly aligns with the required counter-clockwise sweep.
+    
+bool comp(pt &a, pt &b) { 
+    return arg(a) < arg(b); 
+}
+
+// cog
+pt centerOfGravity(const vector<pt>& p) {
+    int n = p.size();
+    pt centroid = {0, 0};
+    ld doubleArea = 0.0;
+
+    for (int i = 0; i < n; i++) {
+        int next = (i + 1) % n;
+        ld c = cross(p[i], p[next]); 
+        
+        doubleArea += c;
+        centroid += (p[i] + p[next]) * c; 
+    }
+
+    // Safety check to prevent division by zero for degenerate polygons
+    if (fabs(doubleArea) < EPS) return centroid; 
+
+    return centroid / (3.0 * doubleArea); 
+}
+
+
+
+typedef long double ld;
+const ld eps = 1e-9;
+
+struct P {
+    ld x, y;
+
+    // Constructor
+    P(ld _x = 0, ld _y = 0) : x(_x), y(_y) {}
+
+    // Overload subtraction to get a directional vector between two points
+    P operator-(const P& other) const {
+        return P(x - other.x, y - other.y);
+    }
+
+    // Overload ^ for 2D Cross Product
+    ld operator^(const P& other) const {
+        return x * other.y - y * other.x;
+    }
+
+    // Overload * for 2D Dot Product (Optional, but highly recommended)
+    ld operator*(const P& other) const {
+        return x * other.x + y * other.y;
+    }
+
+    // Overload < for sorting (sorts by X first, then by Y)
+    // Used in Convex Hull and as a fallback in your polar sort
+    bool operator<(const P& other) const {
+        if (fabs(x - other.x) > eps) {
+            return x < other.x;
+        }
+        return y < other.y;
+    }
+
+    // Overload == to check if two points are identical
+    bool operator==(const P& other) const {
+        return fabs(x - other.x) < eps && fabs(y - other.y) < eps;
+    }
+};
+
+// Helper function used throughout your template to get a vector from A to B
+inline P vec(P a, P b) {
+    return b - a;
+}
+
+
+
+
+double get_full_angle(P a) {
+    // atan2 takes (y, x), NOT (x, y)
+    double ang = atan2(a.y, a.x);
+    
+    // If the angle is negative (quadrants 3 and 4), add 2*PI
+    if (ang < 0) {
+        ang += 2 * PI;
+    }
+    
+    return ang;
+}
+
+// If you need the result in degrees from 0 to 360
+double get_full_angle_degrees(P a) {
+    double ang = atan2(a.y, a.x);
+    if (ang < 0) {
+        ang += 2 * PI;
+    }
+    return ang * (180.0 / PI);
+}
+
+// check if a,b,c are collinear
+bool collinear(P a, P b, P c)  
+{  
+    return (vec(a, b) ^ vec(a, c)) == 0;  
+}
+
+// to sort points in counterclockwise order around a point
+struct cmp  
+{  
+    P about;  
+    cmp(P c)  
+    {  
+       about = c;  
+    }  
+    bool operator()(const P& a, const P& b) const  
+    {  
+       ld cr = vec(about, a) ^ vec(about, b);  
+       if (fabs(cr) < eps)  
+          return a < b;  
+       return cr > 0;  
+    }  
+};  
+
+void sortAntiClockWise(vector<P>& pnts)  
+{  
+    P mn(*min_element(all(pnts)));  
+    sort(pnts.begin(), pnts.end(), cmp(mn));  
+}  
+inline bool pibb(P const& a, P const& b1, P const& b2)  
+{  
+    return a.x >= min(b1.x, b2.x) &&  
+       a.x <= max(b1.x, b2.x) &&  
+       a.y >= min(b1.y, b2.y) &&  
+       a.y <= max(b1.y, b2.y);  
+} 
+
+
+// Returns the center of the circle passing through points A, B, and C
+P getCircleCenter(P A, P B, P C) {  
+    if (isCollinear(A, B, C)) {  
+       collinear = true;  
+       return {0, 0};   
+    }  
+    collinear = false;  
+    ld D = 2 * (A.x * (B.y - C.y) + B.x * (C.y - A.y) + C.x * (A.y - B.y));  
+    ld Ux = ((A.x * A.x + A.y * A.y) * (B.y - C.y) + (B.x * B.x + B.y * B.y) * (C.y - A.y) + (C.x * C.x + C.y * C.y) * (A.y - B.y)) / D;  
+    ld Uy = ((A.x * A.x + A.y * A.y) * (C.x - B.x) + (B.x * B.x + B.y * B.y) * (A.x - C.x) + (C.x * C.x + C.y * C.y) * (B.x - A.x)) / D;  
+    return {Ux, Uy};  
+}
+
+
+
+// compute the convex hull of a set of points using Andrew's monotone chain algorithm
+// hull will contain the points of the convex hull in counterclockwise order
+
+void convexHull(vector<P> p, vector<P>& hull)  
+{  
+  
+    sort(all(p), [&](P& a, P& b)  
+    {  
+      if (a.x != b.x)  
+         return a.x < b.x;  
+      return a.y < b.y;  
+    });  
+    if (p.size() == 1)  
+    {  
+       hull.push_back(p[0]);  
+       return;  
+    }  
+    for (int rep = 0; rep < 2; rep++)  
+    {  
+       int s = hull.size();  
+       for (int i = 0; i < p.size(); i++)  
+       {  
+          while (hull.size() >= s + 2)  
+          {  
+             P p1 = hull.end()[-2];  
+             P p2 = hull.end()[-1];  
+             if ((vec(p1, p2) ^ vec(p1, p[i])) < -eps)  
+                break;  
+  
+             hull.pop_back();  
+          }  
+          hull.push_back(p[i]);  
+       }  
+       reverse(all(p));  
+       hull.pop_back();  
+    }  
+}
+
+
+// Returns the centroid of a polygon defined by the points in vector p
+// centroid is the center of mass of the polygon, assuming uniform density
+
+P getCentroid(vector<P>& p)  
+{  
+    ld x, y;  
+    long long tarea = 0;  
+    x = 0;  
+    y = 0;  
+    for (int i = 1; i < p.size() - 2; i++)  
+    {  
+       long long area = (vec(p[0], p[i]) ^ vec(p[0], p[i + 1]));  
+       x += area * ((p[0].x + p[i].x + p[i + 1].x) / 3.0);  
+       y += area * ((p[0].y + p[i].y + p[i + 1].y) / 3.0);  
+       tarea += area;  
+    }  
+    x /= tarea;  
+    y /= tarea;  
+    return { x, y };  
+}
+
+
+// some properties of regular polygons are listed below.
+
+Properties of Regular polygons Some of the properties of regular polygons are listed below.
+
+All the sides of a regular polygon are equal
+All the interior angles are equal 
+The perimeter of a regular polygon with n sides is equal to the n times of a side measure. 
+The sum of all the interior angles of a simple n-gon or regular polygon = (n  2)  180 
+The number of diagonals in a polygon with n sides = n(n  3)/2 
+The number of triangles formed by joining the diagonals from one corner of a polygon = n  2 
+The measure of each interior angle of n-sided regular polygon = [(n  2)  180]/n 
+The measure of each exterior angle of an n-sided regular polygon = 360/n
+
+area of reqular polygon = ((l^2)*n)/(4tan(PI/n)) l is the side length
+
+n is the number of sides
+
+\end{lstlisting}
 \subsection{allGemometry}
 \begin{lstlisting}[language=C++]
 #include <iostream>
@@ -15785,6 +16582,211 @@ vector<pair<int, int>> all_anti_podal(int n, vector<pt> &p) {
 }
 
 \end{lstlisting}
+\subsection{any two lines intersect}
+\begin{lstlisting}[language=C++]
+/ Detects if ANY two line segments intersect in a set of N segments
+// Uses a simplified Bentley-Ottmann Sweep-line Algorithm in O(N log N) time
+
+#include <bits/stdc++.h>
+using namespace std;
+ 
+#define int long long
+#define endl '\n'
+ 
+// 1. Struct for exact integer math (Zero precision issues!)
+struct pt {
+    int x, y;
+};
+ 
+// Standard 2D cross product
+int cross(pt a, pt b, pt c) {
+    return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+}
+ 
+int sgn(int val) {
+    return (val > 0) - (val < 0);
+}
+ 
+// 1D bounding box check
+bool intersect1D(int a, int b, int c, int d) {
+    if (a > b) swap(a, b);
+    if (c > d) swap(c, d);
+    return max(a, c) <= min(b, d);
+}
+ 
+// Standard integer exact segment intersection
+// Checks bounding boxes first, then uses cross products to ensure segments straddle each other
+bool check_intersect(pt a, pt b, pt c, pt d) {
+    return intersect1D(a.x, b.x, c.x, d.x) &&
+           intersect1D(a.y, b.y, c.y, d.y) &&
+           sgn(cross(a, b, c)) * sgn(cross(a, b, d)) <= 0 &&
+           sgn(cross(c, d, a)) * sgn(cross(c, d, b)) <= 0;
+}
+ 
+// 2. Floating point struct just for ordering the Sweep Line
+struct pt_f {
+    double x, y;
+};
+ 
+struct seg {
+    pt_f p, q;
+    int id;
+    pt orig_p, orig_q; // Keep original points to do the exact integer check
+    
+    // Get the Y coordinate of the segment at a specific sweep line X
+    double get_y(double x) const {
+        if (abs(p.x - q.x) < 1e-9) return p.y;
+        return p.y + (q.y - p.y) * (x - p.x) / (q.x - p.x);
+    }
+};
+ 
+double current_x;
+ 
+// Custom comparator for the active window (Sweep Line)
+// Maintains the vertical order of segments at the current X coordinate
+struct cmp {
+    bool operator()(const seg& a, const seg& b) const {
+        double ya = a.get_y(current_x);
+        double yb = b.get_y(current_x);
+        if (abs(ya - yb) > 1e-9) return ya < yb;
+        return a.id < b.id; // Tie-breaker
+    }
+};
+ 
+struct event {
+    double x;
+    int type; // 1 for left endpoint (insert), -1 for right endpoint (remove)
+    seg s;
+    bool operator<(const event& e) const {
+        if (abs(x - e.x) > 1e-9) return x < e.x;
+        return type > e.type; // Process left endpoints before right ones if X is tied
+    }
+};
+ 
+void solve() {
+    int n;
+    if (!(cin >> n)) return;
+ 
+    vector<event> events;
+    vector<seg> segments(n);
+ 
+    // Trick: Rotate coordinates slightly to avoid vertical line nightmares.
+    // Vertical lines break the y=mx+b sweep line logic because multiple points share the same X.
+    double angle = 0.001;
+    double sinA = sin(angle), cosA = cos(angle);
+ 
+    for (int i = 0; i < n; i++) {
+        int x1, y1, x2, y2;
+        cin >> x1 >> y1 >> x2 >> y2;
+        
+        segments[i].orig_p = {x1, y1};
+        segments[i].orig_q = {x2, y2};
+        segments[i].id = i + 1; // 1-based index for the output
+ 
+        // Apply rotation to the floating-point representations
+        pt_f p = {x1 * cosA - y1 * sinA, x1 * sinA + y1 * cosA};
+        pt_f q = {x2 * cosA - y2 * sinA, x2 * sinA + y2 * cosA};
+ 
+        // Always sweep left to right
+        if (p.x > q.x) swap(p, q);
+ 
+        segments[i].p = p;
+        segments[i].q = q;
+ 
+        // Create left and right events for the sweep line
+        events.push_back({p.x, 1, segments[i]});
+        events.push_back({q.x, -1, segments[i]});
+    }
+ 
+    sort(events.begin(), events.end());
+ 
+    set<seg, cmp> active;
+    vector<set<seg>::iterator> where(n + 1); // Keep track of elements in the set for quick deletion
+ 
+    for (auto& ev : events) {
+        current_x = ev.x;
+        int id = ev.s.id;
+ 
+        if (ev.type == 1) { 
+            // 1. Insert segment into the active window
+            auto nxt = active.insert(ev.s).first;
+            where[id] = nxt;
+            
+            // 2. Check if it intersects with the segment immediately above or below it
+            auto prv = nxt, nxt2 = nxt;
+            if (prv != active.begin()) {
+                prv--;
+                if (check_intersect(ev.s.orig_p, ev.s.orig_q, prv->orig_p, prv->orig_q)) {
+                    cout << "YES\n" << ev.s.id << " " << prv->id << "\n";
+                    return;
+                }
+            }
+            nxt2++;
+            if (nxt2 != active.end()) {
+                if (check_intersect(ev.s.orig_p, ev.s.orig_q, nxt2->orig_p, nxt2->orig_q)) {
+                    cout << "YES\n" << ev.s.id << " " << nxt2->id << "\n";
+                    return;
+                }
+            }
+        } else {
+            // 1. Find the segment in the active window
+            auto it = where[id];
+            
+            // 2. Before removing it, check if its top and bottom neighbors now intersect
+            auto prv = it, nxt = it;
+            nxt++;
+            if (prv != active.begin() && nxt != active.end()) {
+                prv--;
+                if (check_intersect(prv->orig_p, prv->orig_q, nxt->orig_p, nxt->orig_q)) {
+                    cout << "YES\n" << prv->id << " " << nxt->id << "\n";
+                    return;
+                }
+            }
+            // 3. Remove the segment
+            active.erase(it);
+        }
+    }
+    
+    // If the sweep line finishes with no hits
+    cout << "NO\n";
+}
+\end{lstlisting}
+\subsection{areaOfAnyShape}
+\begin{lstlisting}[language=C++]
+// Calculates the area of any simple polygon (convex or concave)
+// Uses the Shoelace Formula (Surveyor's formula)
+
+typedef long long ll;
+typedef pair<ll, ll> pt;
+
+// Computes signed area  2 (keeps operations in integer math to avoid precision loss)
+ll twiceArea(const vector<pt> &p) {
+    int n = p.size();
+    ll area = 0;
+    for (int i = 0; i < n; i++) {
+        ll x1 = p[i].first, y1 = p[i].second;
+        // Wrap around to the first point when i is at the last vertex
+        ll x2 = p[(i + 1) % n].first, y2 = p[(i + 1) % n].second;  
+        
+        // Accumulate the 2D cross product of adjacent vertices
+        area += (x1 * y2 - x2 * y1);
+    }
+    // Return absolute value so it works regardless of clockwise or counter-clockwise input
+    return abs(area);
+}
+
+void solve() {
+    int n;
+    cin >> n;
+    vector<pt> p(n);
+    for (int i = 0; i < n; ++i)
+        cin >> p[i].first >> p[i].second;
+
+    ll twice = twiceArea(p);
+    // Divide by 2.0 at the very end to get the actual floating-point area
+    cout << fixed << setprecision(1) << (twice / 2.0) << '\n';
+}
+\end{lstlisting}
 \subsection{geometryReferenceSheet}
 \begin{lstlisting}[language=C++]
 // =============================================================================
@@ -15889,6 +16891,294 @@ bool StrictInConvex(vector<pt> &p, pt a); // O(log N). True if point strictly in
 //                              ANTIPODAL POINTS
 // =============================================================================
 vector<pair<int, int>> all_anti_podal(int n, vector<pt> &p); // O(N). Returns pairs of indices of antipodal points in a convex polygon.
+
+\end{lstlisting}
+\subsection{minimum distance calculation between points}
+\begin{lstlisting}[language=C++]
+// Finds the Closest Pair of Points in a 2D plane in O(N log N) time
+// Uses a Sweep-line algorithm combined with a balanced BST (std::set)
+
+#include <iostream>
+#include <vector>
+#include <cmath>
+#include <algorithm>
+#include <set>
+#include <iomanip>
+
+using namespace std;
+
+// Struct to hold point data, including original index for the final answer
+struct Point {
+    double x, y;
+    int id; 
+};
+
+// 1. Sort primarily by X-coordinate to process points from left to right
+bool compareX(const Point& a, const Point& b) {
+    if (a.x != b.x) return a.x < b.x;
+    return a.y < b.y;
+}
+
+// 2. Custom comparator for the active window set to sort points by Y-coordinate
+struct compareY {
+    bool operator()(const Point& a, const Point& b) const {
+        if (a.y != b.y) return a.y < b.y;
+        return a.x < b.x; // Tie-breaker ensures points with same Y aren't treated as identical
+    }
+};
+
+// Standard Euclidean distance
+double get_dist(Point a, Point b) {
+    return sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
+}
+
+void solve() {
+    int n;
+    if (!(cin >> n)) return;
+    
+    vector<Point> pts(n);
+    for (int i = 0; i < n; i++) {
+        cin >> pts[i].x >> pts[i].y;
+        pts[i].id = i; // Save original 0-based index
+    }
+
+    // Sort all points from left to right for the sweep-line
+    sort(pts.begin(), pts.end(), compareX);
+
+    // Active window storing points currently within 'min_d' distance of the sweep line
+    set<Point, compareY> active_set;
+    
+    double min_d = 1e18; // Start with a massive distance
+    int best_i = -1, best_j = -1;
+    
+    int left = 0; // Left boundary pointer of our sweeping window
+    
+    for (int i = 0; i < n; i++) {
+        // Step A: Shrink the window
+        // Remove points too far left to possibly form a closer pair with the current point
+        while (left < i && pts[i].x - pts[left].x >= min_d) {
+            active_set.erase(pts[left]);
+            left++;
+        }
+        
+        // Step B: Check Y-bounds
+        // Only check points in the active set whose Y is within [current_y - min_d, current_y + min_d]
+        Point search_point = {pts[i].x, pts[i].y - min_d, -1};
+        auto it = active_set.lower_bound(search_point); 
+        
+        while (it != active_set.end() && it->y - pts[i].y < min_d) {
+            double current_d = get_dist(pts[i], *it);
+            
+            // Step C: Update if a strictly closer pair is found
+            if (current_d < min_d) {
+                min_d = current_d;
+                best_i = pts[i].id;
+                best_j = it->id;
+            }
+            it++;
+        }
+        
+        // Step D: Add the current point into the active window for future comparisons
+        active_set.insert(pts[i]);
+    }
+    
+    // Ensure the smaller index is printed first
+    if (best_i > best_j) swap(best_i, best_j);
+    
+    cout << best_i << " " << best_j << " " << fixed << setprecision(6) << min_d << "\n";
+}
+
+int main() {
+    ios_base::sync_with_stdio(false);
+    cin.tie(NULL);
+    solve();
+    return 0;
+}
+\end{lstlisting}
+\subsection{rectangle union}
+\begin{lstlisting}[language=C++]
+// To find the total area covered by a union of given rectangles
+// Uses a Sweep-line algorithm paired with a Lazy Segment Tree
+
+#include <bits/stdc++.h>
+ 
+using namespace std;
+ 
+typedef long long ll;
+typedef long double ld;
+ 
+#define endl '\n'
+#define all(a)   a.begin(),a.end()
+#define all_r(a)   a.rbegin(),a.rend()
+#define int ll
+ 
+const int oo = 1e9;
+ 
+struct segtree{
+    struct Node{
+        int mn, freqmn, lazy, isLazy;
+        Node(){
+            mn = oo, freqmn = 0;
+            isLazy = 0;
+            lazy = 0;
+        }
+        void change(int x, int lx, int rx){
+            mn += x;
+            lazy += x;
+            isLazy = 1;
+        }
+        Node(int x){
+            mn = x;
+            freqmn = 1; // Represents the length of this minimum value's segment
+            isLazy = 0;
+            lazy = 0;
+        }
+    };
+ 
+    vector<Node> segData;
+    int treeSize;
+ 
+    void propagate(int nx, int lx, int rx){
+        if(!segData[nx].isLazy || rx - lx == 1)
+            return;
+        int mid = lx + (rx - lx)/2;
+        segData[2 * nx + 1].change(segData[nx].lazy, lx, mid);
+        segData[2 * nx + 2].change(segData[nx].lazy, mid, rx);
+        segData[nx].lazy = segData[nx].isLazy = 0;
+    }
+ 
+    segtree(int n){
+        treeSize = 1;
+        while(treeSize < n)
+            treeSize *= 2;
+        segData.assign(2 * treeSize, Node());
+    }
+ 
+    Node merge(Node lf, Node ri){
+        Node ans = Node();
+        ans.mn = min(lf.mn, ri.mn);
+        // Combine frequencies of the minimums to track how much of the range is uncovered
+        if(lf.mn == ans.mn) ans.freqmn += lf.freqmn;
+        if(ri.mn == ans.mn) ans.freqmn += ri.freqmn;
+        return ans;
+    }
+ 
+    void set(int l, int r, int val, int nx, int lx, int rx){
+        propagate(nx, lx, rx);
+        if(rx <= l || lx >= r) return;
+        if(lx >= l && rx <= r){
+            segData[nx].change(val, lx, rx);
+            return;
+        }
+ 
+        int mid = lx + (rx - lx)/2;
+ 
+        set(l, r, val, 2 * nx + 1, lx, mid);
+        set(l, r, val, 2 * nx + 2, mid, rx);
+        segData[nx] = merge(segData[2 * nx + 1], segData[2 * nx + 2]);
+    }
+ 
+    void set(int l, int r, int val){
+        set(l, r, val, 0, 0, treeSize);
+    }
+ 
+    Node get(int l, int r, int nx, int lx, int rx){
+        propagate(nx, lx, rx);
+        if(l <= lx && r >= rx) return segData[nx];
+        if(r <= lx || l >= rx) return Node();
+ 
+        int mid = lx + (rx - lx)/2;
+        return merge(get(l, r, 2 * nx + 1, lx, mid) ,get(l, r, 2 * nx + 2, mid, rx));
+    }
+ 
+    // Returns the total length of the active Y-intervals
+    int get(int l, int r){
+        Node ans = get(l, r, 0, 0, treeSize);
+        // If the minimum is 0, subtract the frequency of 0s (uncovered space) from total range
+        // If the minimum > 0, the entire range is completely covered by at least one rectangle
+        return (r - l) - (ans.mn ? 0 : ans.freqmn);
+    }
+ 
+    void Build(vector<int> & v, int nx, int lx, int rx){
+        if(rx - lx == 1){
+            if(lx < v.size()){
+                segData[nx]= Node(v[lx]);
+            }
+            return;
+        }
+ 
+        int mid = lx + (rx - lx)/2;
+ 
+        Build(v, 2 * nx + 1, lx, mid);
+        Build(v, 2 * nx + 2, mid, rx);
+ 
+        segData[nx] = merge(segData[2 * nx + 1], segData[2 * nx + 2]);
+    }
+ 
+    void Build(vector<int> & v){
+        Build(v, 0, 0, treeSize);
+    }
+};
+ 
+// Represents a vertical line of a rectangle
+struct event{
+    int x, t, y1, y2; // x: coordinate, t: 1 for left edge / 0 for right edge
+};
+ 
+const int N = 2e6 + 1, sh = 1e6; // 'sh' offsets negative Y coordinates
+
+void solve() {
+    int n; cin >> n;
+    vector<event> lines(2 * n);
+    for (int i = 0; i < 2 * n; i += 2) {
+        int x1, y1, x2, y2;
+        cin >> x1 >> y1 >> x2 >> y2;
+        // Map Y coordinates to positive values using shift 'sh'
+        lines[i] = { x1, 1, y1 + sh, y2 + sh};
+        lines[i + 1] = {x2, 0, y1 + sh, y2 + sh};
+    }
+ 
+    // Sort events from left to right. Process left edges before right edges if at the same X.
+    sort(all(lines), [&](event & a, event & b)->bool{
+        if (a.x != b.x) return a.x < b.x;
+        return a.t < b.t;
+    });
+ 
+    int ans = 0;
+ 
+    vector<int> b(N);
+    segtree seg(N);
+    seg.Build(b);
+ 
+    int lastx = -1;
+    
+    for(auto& ev : lines){
+        int x = ev.x;
+        int t = ev.t;
+        int y1 = ev.y1;
+        int y2 = ev.y2;
+        
+        // Add (width * active_height) to total area
+        ans += seg.get(0, N) * (x - lastx);
+        
+        // If it's a left edge, add 1 to the interval. If right edge, subtract 1.
+        if(t) seg.set(y1, y2, 1);
+        else seg.set(y1, y2, -1);
+        
+        lastx = x;
+    }
+ 
+    cout <<  ans << endl;
+}
+ 
+signed main() {
+    ios_base::sync_with_stdio(0);cin.tie(0);cout.tie(0);
+    cout << fixed << setprecision(9);
+    int test = 1; //cin>>test;
+    while (test--) solve();
+    
+    return 0;
+}
 
 \end{lstlisting}
 \section{String}
@@ -16554,6 +17844,18 @@ vector<vector<int>> KMPAutomaton(string &s)
     }
     return aut;
 }
+
+// compressed version of string ... number of repetitions
+
+/*
+// s = a^n  >> ans = n; if s = ababab   ans = 3
+        int ans = 1;
+        if (n % (n-pi[n-1]) == 0) {
+            ans = n/(n-pi[n-1]);
+        }
+        cout <<ans <<'\n';
+
+*/
 
 \end{lstlisting}
 \subsubsection{String matching using bitset}
@@ -19864,6 +21166,64 @@ ll lgv_lemma(const vector<pair<int, int>> &starts, const vector<pair<int, int>> 
 }
 \end{lstlisting}
 \section{Helpers}
+\subsection{2d prefixSum}
+\begin{lstlisting}[language=C++]
+#include <bits/stdc++.h>
+using namespace std;
+#define ll long long
+
+
+// Compute 2D prefix sum
+void computePrefixSum(const vector<vector<int>>& a, vector<vector<long long>>& prefix) {
+    int n = a.size(), m = a[0].size();
+    prefix.assign(n + 1, vector<long long>(m + 1, 0));
+    for (int i = 1; i <= n; i++) {
+        for (int j = 1; j <= m; j++) {
+            prefix[i][j] = a[i - 1][j - 1]
+                         + prefix[i - 1][j]
+                         + prefix[i][j - 1]
+                         - prefix[i - 1][j - 1];
+        }
+    }
+}
+
+// Query sum of submatrix from (r1, c1) to (r2, c2), inclusive (0-based indexing)
+long long getSum(const vector<vector<long long>>& prefix, int r1, int c1, int r2, int c2) {
+    r1++; c1++; r2++; c2++; // convert to 1-based for prefix array
+    return prefix[r2][c2]
+         - prefix[r1 - 1][c2]
+         - prefix[r2][c1 - 1]
+         + prefix[r1 - 1][c1 - 1];
+}
+
+
+void solve() {
+    int n , m , k; cin >> n >> m >> k;
+    vector<vector<int>> mat(n, vector<int>(m));
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < m; j++) {
+            cin >> mat[i][j];
+        }
+    }
+
+
+    vector<vector<ll>>pre;
+    computePrefixSum(mat, pre);
+
+
+
+}
+
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    cin >> t;
+    while (t--)solve();
+    return 0;
+}
+\end{lstlisting}
 \subsection{Adhocs}
 \begin{lstlisting}[language=C++]
 void PratialSum()
@@ -20264,6 +21624,20 @@ vector<int> compress(vector<int> &v)
     for (auto &val : v)
         val = distance(help.begin(), lower_bound(help.begin(), help.end(), val)) + 1;
     return help;
+}
+
+\end{lstlisting}
+\subsection{Get Words}
+\begin{lstlisting}[language=C++]
+vector<string> get_words(string str)
+{
+    vector<string> ret;
+    string word;
+    stringstream ss(str);
+    while (ss >> word) {
+        ret.push_back(word);
+    }
+    return ret;
 }
 
 \end{lstlisting}
@@ -20669,6 +22043,7 @@ void print(__int128 x) {
     putchar(x % 10 + '0');
 }
 bool cmp(__int128 x, __int128 y) { return x > y; }
+
 
 \end{lstlisting}
 \subsection{MEX}
@@ -21251,6 +22626,135 @@ int getRandom(int min, int max)
     return distrib(gen);
 }
 
+\end{lstlisting}
+\subsection{sweepLineAndOfflineQueries}
+\begin{lstlisting}[language=C++]
+// Counts pairs in subarrays where one element divides the other
+// Uses Offline Query Processing and a Segment Tree in O((N + M) log N) time
+
+#include <bits/stdc++.h>
+using namespace std;
+
+// Standard Point-Update, Range-Sum Segment Tree (1-based indexing)
+struct SegmentTree {
+    int n;
+    vector<int> tree;
+    
+    SegmentTree(int n) {
+        this->n = n;
+        tree.assign(4 * n + 1, 0);
+    }
+    
+    void add(int node, int start, int end, int idx, int val) {
+        if (start == end) {
+            tree[node] += val;
+            return;
+        }
+        int mid = start + (end - start) / 2;
+        if (idx <= mid) {
+            add(2 * node, start, mid, idx, val);
+        } else {
+            add(2 * node + 1, mid + 1, end, idx, val);
+        }
+        tree[node] = tree[2 * node] + tree[2 * node + 1];
+    }
+    
+    void add(int idx, int val) {
+        add(1, 1, n, idx, val);
+    }
+    
+    int query(int node, int start, int end, int l, int r) {
+        if (r < start || end < l) return 0;
+        
+        if (l <= start && end <= r) return tree[node];
+        
+        int mid = start + (end - start) / 2;
+        int left_sum = query(2 * node, start, mid, l, r);
+        int right_sum = query(2 * node + 1, mid + 1, end, l, r);
+        
+        return left_sum + right_sum;
+    }
+    
+    int query(int l, int r) {
+        return query(1, 1, n, l, r);
+    }
+};
+
+struct Query {
+    int l, r, id;
+};
+
+int main() {
+    // Fast I/O
+    ios_base::sync_with_stdio(false);
+    cin.tie(NULL);
+
+    int n, m;
+    if (!(cin >> n >> m)) return 0;
+
+    vector<int> p(n + 1);
+    vector<int> pos(n + 1);
+    
+    for (int i = 1; i <= n; i++) {
+        cin >> p[i];
+        pos[p[i]] = i; // Store the 1-based index where each value is located
+    }
+
+    // pre-calculate all valid pairs (i, j) where i divides j
+    // pairs_ending_at[R] will store the left index 'L' for a valid pair ending at index 'R'
+    vector<vector<int>> pairs_ending_at(n + 1);
+    for (int i = 1; i <= n; i++) {
+        // Harmonic series loop: steps through all multiples of i
+        // Runs in O(N log N) total time across all iterations
+        for (int j = i; j <= n; j += i) {
+            int u = pos[i];
+            int v = pos[j];
+            
+            int L = min(u, v);
+            int R = max(u, v);
+            pairs_ending_at[R].push_back(L);
+        }
+    }
+
+    vector<Query> queries(m);
+    for (int i = 0; i < m; i++) {
+        cin >> queries[i].l >> queries[i].r;
+        queries[i].id = i;
+    }
+
+    // Offline Query Trick: Sort queries by their right endpoint in ascending order
+    sort(queries.begin(), queries.end(), [](const Query& a, const Query& b) {
+        return a.r < b.r;
+    });
+
+    vector<int> ans(m);
+    SegmentTree segTree(n);
+
+    int q_idx = 0;
+    
+    // Sweep through the array from left to right (simulating expanding the subarray)
+    for (int r = 1; r <= n; r++) {
+        // "Activate" all pairs whose rightmost element is exactly at the current 'r'
+        for (int l : pairs_ending_at[r]) {
+            segTree.add(l, 1);
+        }
+
+        // Answer all queries that ask for a subarray ending at the current 'r'
+        while (q_idx < m && queries[q_idx].r == r) {
+            int l = queries[q_idx].l;
+            // Since all active pairs in the tree currently have their right endpoint <= r,
+            // we just need to count how many of them have their left endpoint >= l.
+            ans[queries[q_idx].id] = segTree.query(l, r);
+            q_idx++;
+        }
+    }
+
+    for (int i = 0; i < m; i++) {
+        cout << ans[i] << "\n";
+    }
+
+    return 0;
+}
 \end{lstlisting}
 \subsection{valid}
 \begin{lstlisting}[language=C++]
