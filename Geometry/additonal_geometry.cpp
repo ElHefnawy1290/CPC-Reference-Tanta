@@ -17,6 +17,25 @@ bool comp(pt &a, pt &b) {
     return arg(a) < arg(b); 
 }
 
+// cog
+pt centerOfGravity(const vector<pt>& p) {
+    int n = p.size();
+    pt centroid = {0, 0};
+    ld doubleArea = 0.0;
+
+    for (int i = 0; i < n; i++) {
+        int next = (i + 1) % n;
+        ld c = cross(p[i], p[next]); 
+        
+        doubleArea += c;
+        centroid += (p[i] + p[next]) * c; 
+    }
+
+    // Safety check to prevent division by zero for degenerate polygons
+    if (fabs(doubleArea) < EPS) return centroid; 
+
+    return centroid / (3.0 * doubleArea); 
+}
 
 
 
