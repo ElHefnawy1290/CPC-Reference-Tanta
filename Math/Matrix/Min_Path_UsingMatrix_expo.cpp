@@ -17,6 +17,12 @@
  * - Execution: Call `fastPower` to raise the matrix to the power of K.
  *       t = fastPower(t, k);
 
+
+#define Row vector<int>
+#define Matrix vector<Row>
+const int mod = 1e9 + 7;
+const int oo = 2e18+5;
+
 Matrix mul(Matrix &a,Matrix &b) {
     int n = a.size();
     int m = b[0].size();
