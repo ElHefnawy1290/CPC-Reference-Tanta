@@ -1,3 +1,43 @@
+/**
+ * 🛠️ THE ULTIMATE CP TEMPLATE BLUEPRINT: DYNAMIC STRING HASHING (SEGMENT TREE)
+ *
+ * 1. 🎯 WHAT PROBLEM DOES THIS SOLVE?
+ * - Keywords: "Dynamic Palindrome Queries", "Substring Equality with Point Updates", "Double Hashing".
+ * - Classic Scenarios: You have a string and you need to answer queries like "Is the substring [L, R] 
+ *   a palindrome?" OR "Does substring [L1, R1] match [L2, R2]?". Crucially, the string is NOT static; 
+ *   you will receive point updates (changing the character at index X).
+ * - The Magic: "Polynomial Rolling Hash inside a Segment Tree". A rolling hash is just a sum of terms 
+ *   (char * base^i). Segment trees are perfect for point updates and range sums! By maintaining the hash 
+ *   in a Segment Tree, updates take O(log N). To query a range [L, R], we sum the hashes in that range 
+ *   and "normalize" it by multiplying by the modular inverse of base^(L-1).
+ *
+ * 2. 📦 HOW TO USE IT (THE BLACK BOX)
+ * - Initialization (CRITICAL): You MUST call `init()` once at the start of `main()` to precompute 
+ *   the powers and modular inverses.
+ * - 1-Based Indexing ONLY: Your string indices and queries MUST be 1-based (from 1 to N).
+ *       HashingSegmentTree forward_tree(N), backward_tree(N);
+ * - Building: Add characters one by one. For the backward tree, insert at `N - idx + 1`.
+ *       forward_tree.update(i, s[i]);
+ *       backward_tree.update(n - i + 1, s[i]);
+ * - Execution: 
+ *       To update a char: forward_tree.update(idx, new_c); backward_tree.update(n - idx + 1, new_c);
+ *       To check palindrome: isPalindrome(forward_tree, backward_tree, L, R, n);
+ *
+ * - Complexity:
+ *       Time: Initialization O(N), Updates O(log N), Queries O(log N).
+ *       Space: O(N) for the precomputed arrays and Segment Tree nodes.
+ *
+ * 3. ⚙️ HOW TO ADAPT IT (THE DIALS & SWITCHES)
+ * - ⚠️ 0-Based Indexing Crash Warning: The `query` function uses `inv1[l - 1]`. If you pass `l = 0`, 
+ *   it will access index `-1` and cause Undefined Behavior. ALWAYS use 1-based indexing for queries.
+ * - Hack Prevention: This template uses Double Hashing with primes 1e9+7 and 2e9+11. It is virtually 
+ *   impossible to break (anti-hash tests will fail). If you face a very strict Time Limit (TLE), you 
+ *   can convert it to Single Hashing (remove mod2, base2, pw2, inv2) and use a randomized base instead.
+ * - `#define int long long`: This template heavily relies on this macro. If you ever remove it, you 
+ *   MUST change all hash values, modulos, and products to `long long` to prevent integer overflow 
+ *   during `(A * B) % MOD`.
+ */
+
 #define int long long
 const int N = 1e5 + 5, mod1 = 1e9 + 7, mod2 = 2e9 + 11;
 ll base1 = 31, base2 = 37, pw1[N + 1], pw2[N + 1], inv1[N + 1], inv2[N + 1];
