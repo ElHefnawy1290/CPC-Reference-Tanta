@@ -1,3 +1,7 @@
+// Distinct elements in range
+// kth element
+// couting or frequency of numbers in range
+
 struct PST
 {
     struct Node

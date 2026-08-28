@@ -1,23 +1,14 @@
 struct Node
 {
     vector<int> v;
-
-    Node()
-    {
-    }
-
-    Node(int val)
-    {
-        v.push_back(val);
-    }
 };
 
-struct segmentTree
+struct segTree
 {
-    int sz;
     vector<Node> seg;
+    int sz;
 
-    segmentTree(int n)
+    segTree(int n)
     {
         sz = 1;
         while (sz < n)
@@ -25,47 +16,99 @@ struct segmentTree
         seg.assign(2 * sz, Node());
     }
 
-    void init(vector<int> &arr, int node, int lx, int rx)
+    Node merge(Node &l, Node &r)
+    {
+        Node res;
+        res.v.reserve(l.v.size() + r.v.size());
+        std::merge(all(l.v), all(r.v), back_inserter(res.v));
+        return res;
+    }
+
+    void build(vector<int> &arr, int ni, int lx, int rx)
     {
         if (rx - lx == 1)
         {
-            if (lx < int(arr.size()))
-                seg[node] = Node(arr[lx]);
+            if (lx < (int)arr.size())
+            {
+                seg[ni].v = {arr[lx]};
+            }
             return;
         }
         int mid = (lx + rx) / 2;
-        init(arr, 2 * node + 1, lx, mid);
-        init(arr, 2 * node + 2, mid, rx);
-        seg[node] = merge(seg[2 * node + 1], seg[2 * node + 2]);
+        build(arr, ni * 2 + 1, lx, mid);
+        build(arr, ni * 2 + 2, mid, rx);
+        seg[ni] = merge(seg[ni * 2 + 1], seg[ni * 2 + 2]);
     }
 
-    void init(vector<int> &arr)
+    void build(vector<int> &arr)
     {
-        init(arr, 0, 0, sz);
+        build(arr, 0, 0, sz);
     }
 
-    Node merge(Node &lf, Node &rt)
-    {
-        Node ans = Node();
-        ans.v.resize(int(lf.v.size()) + int(rt.v.size()));
-        std::merge(lf.v.begin(), lf.v.end(), rt.v.begin(), rt.v.end(), ans.v.begin());
-        return ans;
-    }
-
-    int get(int l, int r, int k, int node, int lx, int rx)
+    // 1. Elements Strictly Less Than K (< K)
+    int query_less(int l, int r, int k, int ni, int lx, int rx)
     {
         if (lx >= l && rx <= r)
-            return distance(upper_bound(seg[node].v.begin(), seg[node].v.end(), k), seg[node].v.end());
-        if (rx <= l || lx >= r)
+        {
+            return lower_bound(all(seg[ni].v), k) - seg[ni].v.begin();
+        }
+        if (lx >= r || rx <= l)
             return 0;
         int mid = (lx + rx) / 2;
-        int lf = get(l, r, k, 2 * node + 1, lx, mid);
-        int ri = get(l, r, k, 2 * node + 2, mid, rx);
-        return lf + ri;
+        return query_less(l, r, k, ni * 2 + 1, lx, mid) + query_less(l, r, k, ni * 2 + 2, mid, rx);
     }
 
-    int get(int l, int r, int k)
+    // 2. Elements Less Than or Equal K (<= K)
+    int query_less_equal(int l, int r, int k, int ni, int lx, int rx)
     {
-        return get(l, r, k, 0, 0, sz);
+        if (lx >= l && rx <= r)
+        {
+            return upper_bound(all(seg[ni].v), k) - seg[ni].v.begin();
+        }
+        if (lx >= r || rx <= l)
+            return 0;
+        int mid = (lx + rx) / 2;
+        return query_less_equal(l, r, k, ni * 2 + 1, lx, mid) + query_less_equal(l, r, k, ni * 2 + 2, mid, rx);
+    }
+
+    // 3. Elements Strictly Greater Than K (> K)
+    int query_greater(int l, int r, int k, int ni, int lx, int rx)
+    {
+        if (lx >= l && rx <= r)
+        {
+            return seg[ni].v.end() - upper_bound(all(seg[ni].v), k);
+        }
+        if (lx >= r || rx <= l)
+            return 0;
+        int mid = (lx + rx) / 2;
+        return query_greater(l, r, k, ni * 2 + 1, lx, mid) + query_greater(l, r, k, ni * 2 + 2, mid, rx);
+    }
+
+    // 4. Elements Greater Than or Equal K (>= K)
+    int query_greater_equal(int l, int r, int k, int ni, int lx, int rx)
+    {
+        if (lx >= l && rx <= r)
+        {
+            return seg[ni].v.end() - lower_bound(all(seg[ni].v), k);
+        }
+        if (lx >= r || rx <= l)
+            return 0;
+        int mid = (lx + rx) / 2;
+        return query_greater_equal(l, r, k, ni * 2 + 1, lx, mid) + query_greater_equal(l, r, k, ni * 2 + 2, mid, rx);
+    }
+    // 5. Elements in Range [X, Y]
+    int query_in_range(int l, int r, int x, int y)
+    {
+        // Total elements <= Y  MINUS  Total elements < X
+        return get_less_equal(l, r, y) - get_less(l, r, x);
+    }
+
+    // Helpers
+    int get_greater(int l, int r, int k) { return query_greater(l, r, k, 0, 0, sz); }
+    int get_greater_equal(int l, int r, int k) { return query_greater_equal(l, r, k, 0, 0, sz); }
+    int get_less(int l, int r, int k) { return query_less(l, r, k, 0, 0, sz); }
+    int get_less_equal(int l, int r, int k)
+    {
+        return query_less_equal(l, r, k, 0, 0, sz);
     }
 };
