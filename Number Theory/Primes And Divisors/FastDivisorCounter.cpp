@@ -32,14 +32,12 @@
 #include <bits/stdc++.h>
 using namespace std;
 #define ll long long
-
 struct FastDivisorCounter
 {
 private:
     vector<int> primes;
     ll wheel_size;
     vector<ll> spokes; // Stores numbers from 1 to wheel_size that are coprime to the base primes
-
 public:
     FastDivisorCounter()
     {
@@ -50,7 +48,6 @@ public:
         {
             wheel_size *= p;
         }
-
         // ? PRECOMPUTATION MAGIC: We find all valid "spokes" ONCE.
         // There are exactly 1,658,880 such numbers. By saving them, we skip millions 
         // of useless iterations in future queries.
@@ -71,11 +68,9 @@ public:
             }
         }
     }
-
     ll count(ll n)
     {
         ll ans = 1;
-
         // Step 1: Remove all factors of the base primes and count their contribution
         for (int p : primes)
         {
@@ -88,11 +83,9 @@ public:
             // Standard divisor formula: multiply by (power + 1)
             ans *= (c + 1);
         }
-
         // Step 2: The remaining part of 'n' is now completely coprime to our base primes.
         // We only check potential divisors using our precomputed wheel spokes.
-        ll all = 0;
-        
+        ll all = 0; 
         for (ll spoke : spokes)
         {
             ll o = spoke;
@@ -111,34 +104,21 @@ public:
                 all++;
             }
         }
-
         // The total divisors of the original N is the product of the divisors 
         // of the base-prime part and the divisors of the remaining coprime part.
         return ans * all;
     }
 };
-
 void solve()
 {
     int t;
     if (!(cin >> t)) return;
-
     // Initialize OUTSIDE the query loop so the wheel is built only once!
     FastDivisorCounter fdc;
-
     while (t--)
     {
         ll n;
         cin >> n;
         cout << fdc.count(n) << "\n";
     }
-}
-
-int main()
-{
-    // Fast I/O
-    ios_base::sync_with_stdio(false);
-    cin.tie(NULL);
-    // solve();
-    return 0;
 }
