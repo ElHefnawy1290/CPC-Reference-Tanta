@@ -1,3 +1,45 @@
+/**
+ * 🛠️ THE ULTIMATE CP TEMPLATE BLUEPRINT: IMPLICIT TREAP WITH STRING HASHING
+ *
+ * 1. 🎯 WHAT PROBLEM DOES THIS SOLVE?
+ * - Keywords: "Dynamic String", "Insert/Delete characters", "Shift indices", "Palindrome queries".
+ * - Classic Scenarios: A Segment Tree can update a character at index X, but it CANNOT insert 
+ *   a new character (shifting everything right) or delete a substring (shifting everything left). 
+ *   If a problem asks you to insert/delete characters AND query substrings/palindromes, 
+ *   standard Segment Trees or Fenwick trees will fail.
+ * - The Magic: "The Implicit Treap". It acts as a dynamic array where every node represents 
+ *   a character. By using the size of the left subtree as the "implicit index", we can Split 
+ *   and Merge the string in O(log N) time. We augment each node to store the Rolling Hash of 
+ *   its subtree. When we merge nodes, we mathematically combine their hashes using precomputed 
+ *   powers of our base.
+ *
+ * 2. 📦 HOW TO USE IT (THE BLACK BOX)
+ * - Initialization: You MUST call `init()` in `main()` to precompute the `pw` array.
+ *       Treap a(s), b(reversed_s);
+ * - Insertions: Insert character `c` at 1-based position `pos`.
+ *       a.addChar(pos, c);
+ * - Deletions: Delete the entire substring from 1-based index `L` to `R`.
+ *       a.deleteRange(L, R);
+ * - Queries: Get the rolling hash of the substring [L, R].
+ *       int h = a.getHash(L, R);
+ *
+ * - Complexity:
+ *       Time: O(log N) for Insert, Delete, and Query!
+ *       Space: O(N) for the Treap nodes.
+ *
+ * 3. ⚙️ HOW TO ADAPT IT (THE DIALS & SWITCHES)
+ * - The Palindrome Reverse Math: When tracking a reversed string dynamically, indices flip. 
+ *   If the current string length is `N`, the equivalent of index `idx` in the reversed string 
+ *   is `N - idx + 1`. Note that `N` MUST be manually updated (e.g., `n++` or `n -= length`) 
+ *   exactly as shown in `main()` whenever you insert or delete!
+ * - Memory Limit Exceeded (MLE) Warning: In `deleteRange`, the code drops the `b[0]` component 
+ *   (the deleted segment) without freeing the memory. In competitive programming, this is 
+ *   usually fine. But if you face MLE on huge test cases, you should write a recursive `destroy()` 
+ *   function to `delete` the extracted nodes.
+ * - Single vs Double Hashing: This template uses Single Hashing (`mod = 1e9+7`). If you get 
+ *   Wrong Answer (WA) due to malicious anti-hash tests, you can upgrade `h` to a `pair<int,int>` 
+ *   and apply double hashing just like in the Segment Tree template.
+ */
 #include <bits/stdc++.h>
 using namespace std;
 #define ll long long
